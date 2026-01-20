@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Enterprise color system - neutral and professional */
+  --background: 220 13% 97%; /* Subtle gray background */
+  --foreground: 222 47% 11%; /* Slate 900 */
+  --card: 0 0% 100%; /* White */
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 222 47% 11%; /* Slate 900 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 13% 95%; /* Subtle gray */
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 13% 95%;
+  --muted-foreground: 215 16% 47%; /* Slate 600 */
+  --accent: 220 13% 95%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%; /* Professional red */
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%; /* Subtle border */
+  --input: 220 13% 91%;
+  --ring: 222 47% 11%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 217 33% 17%;
+  --card-foreground: 210 40% 98%;
+  --popover: 217 33% 17%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 33% 23%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 33% 23%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 33% 23%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217 33% 23%;
+  --input: 217 33% 23%;
+  --ring: 212 72% 59%;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Professional utility classes */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+/* Smooth, subtle transitions */
+@layer components {
+  .transition-base {
+    @apply transition-colors duration-200;
+  }
+}
