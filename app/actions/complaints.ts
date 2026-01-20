@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/database.types";
+
+type ComplaintStatus = Database["public"]["Tables"]["complaints"]["Row"]["status"];
 import { addDays } from "date-fns";
 
 type CreateComplaintInput = {
@@ -18,12 +22,23 @@ type CreateComplaintInput = {
 
 export async function createComplaintAction(input: CreateComplaintInput) {
   const supabase = createServiceClient();
+  
+  // Get authenticated user
+  const authSupabase = await createClient();
+  const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+  
+  if (authError || !user) {
+    throw new Error("You must be logged in to create a complaint");
+  }
 
   // Map categories to seeded IDs or create new ones
   const seededIds = {
     technical_support: "00000000-0000-0000-0000-000000000011",
     product: "00000000-0000-0000-0000-000000000013",
     service_quality: "00000000-0000-0000-0000-000000000014",
+    provider_conduct: "00000000-0000-0000-0000-000000000015",
+    access_eligibility: "00000000-0000-0000-0000-000000000016",
+    privacy_concern: "00000000-0000-0000-0000-000000000017",
   } as const;
 
   const labelByKey: Record<string, string> = {
@@ -41,17 +56,17 @@ export async function createComplaintAction(input: CreateComplaintInput) {
   if (input.category in seededIds) {
     categoryId = seededIds[input.category as keyof typeof seededIds];
   } else {
-    // Create or reuse category
+    // Create or reuse category (for "other" and custom)
     const categoryName = labelByKey[input.category];
     
     // Try to find existing
-    const { data: existing } = await supabase
+    const { data: existing, error: findError } = await supabase
       .from("categories")
       .select("id")
       .eq("name", categoryName)
       .single();
 
-    if (existing) {
+    if (!findError && existing) {
       categoryId = (existing as any).id;
     } else {
       // Create new category
@@ -70,6 +85,30 @@ export async function createComplaintAction(input: CreateComplaintInput) {
     }
   }
 
+  // Ensure user exists in users table or create them
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", user.id)
+    .single();
+
+  if (!existingUser) {
+    // Create user record
+    const { error: userError } = await supabase
+      .from("users")
+      .insert({
+        id: user.id,
+        name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User",
+        email: user.email!,
+        role: "Agent", // Default role
+      } as any);
+
+    if (userError) {
+      console.error("Failed to create user:", userError);
+      // Continue anyway - the user might have been created by another request
+    }
+  }
+
   // Insert complaint
   const { data, error } = await supabase
     .from("complaints")
@@ -79,7 +118,7 @@ export async function createComplaintAction(input: CreateComplaintInput) {
       desired_outcome: input.desiredOutcome || null,
       category_id: categoryId!,
       priority: input.priority,
-      reporter_id: "00000000-0000-0000-0000-000000000001", // Default admin
+      reporter_id: user.id, // Use authenticated user's ID
       assigned_to_id: null,
       customer_name: input.branch || null,
       customer_email: input.email || null,
@@ -103,4 +142,197 @@ export async function createComplaintAction(input: CreateComplaintInput) {
 
   revalidatePath("/complaints");
   return { success: true, complaintNumber: (data as any).complaint_number };
+}
+
+export async function updateComplaintStatusAction(complaintId: string, status: ComplaintStatus) {
+  const supabase: any = createServiceClient();
+  const updates: Database["public"]["Tables"]["complaints"]["Update"] = { status };
+
+  // Capture user for audit trail
+  const authSupabase = await createClient();
+  const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+  if (authError) {
+    console.warn("Status change proceeding without auth user", authError.message);
+  }
+
+  const { data, error } = await supabase
+    .from("complaints")
+    .update(updates)
+    .eq("id", complaintId)
+    .select("id, status, assigned_to_id, priority, complaint_number, subject, description, created_at, due_date, category_id")
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Failed to update status");
+  }
+
+  // Log activity (best-effort)
+  if (user?.id) {
+    const { error: activityError } = await supabase
+      .from("activities")
+      .insert({
+        complaint_id: complaintId,
+        action: "status_change",
+        details: { to: status } as any,
+        user_id: user.id,
+      } as Database["public"]["Tables"]["activities"]["Insert"]);
+    if (activityError) {
+      console.error("Failed to log activity:", activityError);
+    }
+  }
+
+  revalidatePath("/complaints");
+  revalidatePath("/dashboard");
+  revalidatePath(`/complaints/${complaintId}`);
+
+  return data;
+}
+
+export async function getRecentActivities(limit: number = 3) {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("activities")
+    .select(`
+      *,
+      complaint:complaints(id, complaint_number, subject),
+      user:users(id, name)
+    `)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Failed to fetch activities:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getRecentComplaints(limit: number = 5, minutes: number = 60) {
+  const supabase = createServiceClient();
+  const since = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("complaints")
+    .select(`
+      *,
+      category:categories(name),
+      reporter:users!complaints_reporter_id_fkey(name)
+    `)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Failed to fetch recent complaints:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function createCommentAction(
+  complaintId: string,
+  message: string,
+  isInternal: boolean = false
+) {
+  const supabase: any = createServiceClient();
+
+  // Get authenticated user
+  const authSupabase = await createClient();
+  const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("You must be logged in to add a comment");
+  }
+
+  // Create comment
+  const { data: comment, error: commentError } = await supabase
+    .from("comments")
+    .insert({
+      complaint_id: complaintId,
+      user_id: user.id,
+      content: message,
+      is_internal: isInternal,
+    })
+    .select()
+    .single();
+
+  if (commentError) {
+    throw new Error(`Failed to create comment: ${commentError.message}`);
+  }
+
+  // Log activity
+  const { error: activityError } = await supabase
+    .from("activities")
+    .insert({
+      complaint_id: complaintId,
+      action: "comment",
+      details: { type: isInternal ? "internal" : "public" } as any,
+      user_id: user.id,
+    });
+
+  if (activityError) {
+    console.error("Failed to log comment activity:", activityError);
+  }
+
+  revalidatePath(`/complaints/${complaintId}`);
+  return comment;
+}
+
+export async function updateComplaintAssigneeAction(complaintId: string, assigneeId: string | null) {
+  const supabase: any = createServiceClient();
+  const updates: Database["public"]["Tables"]["complaints"]["Update"] = { assigned_to_id: assigneeId };
+
+  // Capture user for audit trail
+  const authSupabase = await createClient();
+  const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+  if (authError) {
+    console.warn("Assignment change proceeding without auth user", authError.message);
+  }
+
+  const { data, error } = await supabase
+    .from("complaints")
+    .update(updates)
+    .eq("id", complaintId)
+    .select(`
+      id,
+      status,
+      assigned_to_id,
+      priority,
+      complaint_number,
+      subject,
+      description,
+      created_at,
+      due_date,
+      category_id,
+      assigned_to:assigned_to_id(id, name, role)
+    `)
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Failed to update assignee");
+  }
+
+  // Log activity (best-effort)
+  if (user?.id) {
+    const { error: activityError } = await supabase
+      .from("activities")
+      .insert({
+        complaint_id: complaintId,
+        action: "assignment_change",
+        details: { to: assigneeId } as any,
+        user_id: user.id,
+      } as Database["public"]["Tables"]["activities"]["Insert"]);
+    if (activityError) {
+      console.error("Failed to log activity:", activityError);
+    }
+  }
+
+  revalidatePath("/complaints");
+  revalidatePath("/dashboard");
+  revalidatePath(`/complaints/${complaintId}`);
+
+  return data;
 }

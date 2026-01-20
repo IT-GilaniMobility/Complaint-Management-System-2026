@@ -36,7 +36,7 @@ export function FilterBar({
   };
 
   return (
-    <div className="space-y-3 rounded-xl border bg-white p-4 shadow-sm">
+    <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
         <div className="lg:col-span-2">
           <Label className="mb-1 block text-xs uppercase text-muted-foreground">Search</Label>

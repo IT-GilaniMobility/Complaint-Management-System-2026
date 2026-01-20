@@ -101,7 +101,7 @@ export function ComplaintTable({ data, categories, users, loading, onAssign, onC
         header: "Assigned To",
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
-            {row.original.assignedTo ? userLookup[row.original.assignedTo] ?? "Unassigned" : "Unassigned"}
+            {row.original.assignedTo ? row.original.assignedTo : "Unassigned"}
           </span>
         ),
       },
@@ -201,7 +201,7 @@ export function ComplaintTable({ data, categories, users, loading, onAssign, onC
         </DropdownMenu>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

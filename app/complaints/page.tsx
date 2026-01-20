@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { categories, complaints as seedComplaints, users } from "@/lib/mock-data";
+import { categories, users } from "@/lib/mock-data";
 import { complaintStatusLabel, isOverdue } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import { createClient } from "@/lib/supabase/client";
 
 const tabs: SummaryKey[] = ["Total", "Unassigned", "In Progress", "Resolved", "Closed"];
 
@@ -27,7 +28,7 @@ const initialFilters: ComplaintFilters = {
 };
 
 export default function ComplaintsPage() {
-  const [rows, setRows] = useState(seedComplaints);
+  const [rows, setRows] = useState<any[]>([]);
   const [filters, setFilters] = useState<ComplaintFilters>(initialFilters);
   const [activeTab, setActiveTab] = useState<SummaryKey>("Total");
   const [loading, setLoading] = useState(true);
@@ -35,8 +36,42 @@ export default function ComplaintsPage() {
   const [statusTarget, setStatusTarget] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 650);
-    return () => clearTimeout(timer);
+    const fetchComplaints = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("complaints")
+        .select(`
+          *,
+          category:categories(id, name),
+          reporter:users!complaints_reporter_id_fkey(id, name),
+          assigned:users!complaints_assigned_to_id_fkey(id, name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        // Transform to match expected format
+        const transformed = data.map((c: any) => ({
+          id: c.id,
+          number: c.complaint_number,
+          subject: c.subject,
+          description: c.description,
+          categoryId: c.category?.name || 'Unknown',
+          priority: c.priority,
+          status: c.status,
+          reporter: c.reporter?.name || 'Unknown',
+          assignedTo: c.assigned?.name || null,
+          createdAt: c.created_at,
+          resolvedAt: c.resolved_at,
+          closedAt: c.closed_at,
+          dueDate: c.due_date,
+          slaDueAt: c.due_date,
+        }));
+        setRows(transformed);
+      }
+      setLoading(false);
+    };
+
+    fetchComplaints();
   }, []);
 
   const filteredRows = useMemo(() => {
@@ -161,7 +196,7 @@ export default function ComplaintsPage() {
       />
 
       {showEmpty ? (
-        <Card className="border-dashed bg-white/70">
+        <Card className="border-dashed">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700">

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto border border-slate-200 rounded-lg">
+    <div className="relative w-full overflow-auto border rounded-lg">
       <table
         ref={ref}
         className={cn("w-full caption-bottom text-sm", className)}
@@ -16,7 +16,7 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
 Table.displayName = "Table";
 
 const TableHeader = ({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
-  <thead className={cn("border-b border-slate-200 bg-slate-50", className)} {...props} />
+  <thead className={cn("border-b bg-muted/50", className)} {...props} />
 );
 
 const TableBody = ({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
@@ -27,7 +27,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <tr
       ref={ref}
-      className={cn("border-b border-slate-200 transition-colors hover:bg-slate-50 data-[state=selected]:bg-slate-100", className)}
+      className={cn("border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted", className)}
       {...props}
     />
   )
@@ -39,7 +39,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        "h-12 px-6 py-3 text-left align-middle text-xs font-semibold text-slate-700 uppercase tracking-wide",
+        "h-12 px-6 py-3 text-left align-middle text-xs font-semibold text-muted-foreground uppercase tracking-wide",
         className
       )}
       {...props}
@@ -52,7 +52,7 @@ const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<
   ({ className, ...props }, ref) => (
     <td
       ref={ref}
-      className={cn("px-6 py-4 align-middle text-sm text-slate-900", className)}
+      className={cn("px-6 py-4 align-middle text-sm text-foreground", className)}
       {...props}
     />
   )

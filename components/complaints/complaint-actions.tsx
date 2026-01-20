@@ -33,12 +33,11 @@ export function AssignDialog({
         </DialogHeader>
         <div className="space-y-2">
           <Label>Assignee</Label>
-          <Select value={assignee ?? ""} onValueChange={(value) => setAssignee(value)}>
+          <Select value={assignee || undefined} onValueChange={(value) => setAssignee(value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select assignee" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Unassigned</SelectItem>
               {users.map((user) => (
                 <SelectItem key={user.id} value={user.id}>
                   {user.name} · {user.role}

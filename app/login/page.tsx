@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Moon, Sun } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isDark, setIsDark] = useState(false);
   const supabase = createClient();
+
+  useEffect(() => {
+    // Check initial theme
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    setIsDark(isDarkMode);
+  }, []);
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+    if (newIsDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -35,10 +53,26 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen w-full">
+      {/* Theme Toggle - Top Right */}
+      <div className="fixed right-6 top-6 z-50">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="h-10 w-10 rounded-full bg-card/80 backdrop-blur-sm hover:bg-card"
+        >
+          {isDark ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
+
       {/* Left side - Illustration */}
       <div className="relative hidden w-1/2 lg:block">
         <Image
-          src="/cms.jpg"
+          src="/cms-4.svg"
           alt="Complaint Management System"
           fill
           className="object-cover"
@@ -47,13 +81,13 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - Login */}
-      <div className="flex w-full items-center justify-center bg-white px-6 lg:w-1/2">
-        <Card className="w-full max-w-md border-slate-200 shadow-lg">
+      <div className="flex w-full items-center justify-center bg-background px-6 lg:w-1/2">
+        <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="space-y-2 text-center">
-            <CardTitle className="text-3xl font-bold text-slate-900">
+            <CardTitle className="text-3xl font-bold">
               Welcome Back
             </CardTitle>
-            <CardDescription className="text-base text-slate-600">
+            <CardDescription className="text-base">
               Sign in to access the Complaint Management System
             </CardDescription>
           </CardHeader>
@@ -62,7 +96,8 @@ export default function LoginPage() {
               onClick={handleGoogleSignIn}
               disabled={loading}
               size="lg"
-              className="w-full bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 shadow-sm"
+              variant="outline"
+              className="w-full shadow-sm"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -109,7 +144,7 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <div className="pt-4 text-center text-sm text-slate-500">
+            <div className="pt-4 text-center text-sm text-muted-foreground">
               By signing in, you agree to our Terms of Service and Privacy Policy
             </div>
           </CardContent>

@@ -89,8 +89,8 @@ export function SummaryCards({
                     <Icon className={cn("h-4 w-4", colors.icon)} />
                   </div>
                 </div>
-                <div className="text-2xl font-semibold text-slate-900">{counts[key]}</div>
-                <p className="mt-1 text-xs text-slate-600">{label}</p>
+                <div className="text-2xl font-semibold">{counts[key]}</div>
+                <p className="mt-1 text-xs text-muted-foreground">{label}</p>
               </CardContent>
             </Card>
           </button>

@@ -16,11 +16,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname?.startsWith("/login");
 
   if (isAuthPage) {
-    return <div className="min-h-screen bg-slate-50">{children}</div>;
+    return <div className="min-h-screen bg-background">{children}</div>;
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-foreground">
+    <div className="flex min-h-screen bg-background text-foreground">
       <div className="hidden md:block">
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((prev) => !prev)} />
       </div>
