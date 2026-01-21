@@ -8,9 +8,10 @@ type UserRole = "Admin" | "Lead Agent" | "Agent" | "Staff";
 export async function updateUserRole(userId: string, role: UserRole) {
   const supabase = createServiceClient();
 
-  const { error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
     .from("users")
-    .update({ role } as { role: string })
+    .update({ role })
     .eq("id", userId);
 
   if (error) {
