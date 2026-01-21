@@ -7,8 +7,8 @@ export async function GET(request: Request) {
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
 
-  // Build the base URL properly
-  const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+  // Build the base URL properly - use env var for production, fallback to request URL
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${requestUrl.protocol}//${requestUrl.host}`;
 
   // Handle OAuth errors
   if (error) {
