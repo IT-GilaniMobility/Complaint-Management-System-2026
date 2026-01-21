@@ -45,7 +45,8 @@ export async function createComplaintAction(input: CreateComplaintInput) {
     const categoryName = labelByKey[input.category];
     
     // Try to find existing
-    const { data: existing } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase as any)
       .from("categories")
       .select("id")
       .eq("name", categoryName)
@@ -55,7 +56,8 @@ export async function createComplaintAction(input: CreateComplaintInput) {
       categoryId = existing.id;
     } else {
       // Create new category
-      const { data: created, error: catError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: created, error: catError } = await (supabase as any)
         .from("categories")
         .insert({
           name: categoryName,
