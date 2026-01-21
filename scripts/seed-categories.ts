@@ -13,7 +13,8 @@ async function seedCategories() {
   const supabase = createServiceClient();
 
   for (const category of categories) {
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from("categories")
       .upsert(
         { id: category.id, name: category.name, sla_hours: category.sla_hours, description: null },
