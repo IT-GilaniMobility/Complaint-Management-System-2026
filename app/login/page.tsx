@@ -1,24 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Suspense } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Moon, Sun } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Moon, Sun, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     // Check initial theme
     const isDarkMode = document.documentElement.classList.contains('dark');
     setIsDark(isDarkMode);
-  }, []);
+
+    // Check for error in URL params
+    const errorParam = searchParams.get('error');
+    const messageParam = searchParams.get('message');
+    if (errorParam) {
+      setError(messageParam || 'Authentication failed. Please try again.');
+    }
+  }, [searchParams]);
 
   const toggleTheme = () => {
     const newIsDark = !isDark;
@@ -33,10 +43,15 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      // Use environment variable if available, fallback to window.location
+      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL 
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
+        : `${window.location.origin}/auth/callback`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
         },
       });
 
@@ -92,6 +107,13 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
+            {error && (
+              <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+            
             <Button
               onClick={handleGoogleSignIn}
               disabled={loading}
@@ -151,5 +173,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
