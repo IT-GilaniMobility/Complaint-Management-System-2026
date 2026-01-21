@@ -10,7 +10,7 @@ export async function updateUserRole(userId: string, role: UserRole) {
 
   const { error } = await supabase
     .from("users")
-    .update({ role })
+    .update({ role } as { role: string })
     .eq("id", userId);
 
   if (error) {
