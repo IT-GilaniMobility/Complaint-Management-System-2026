@@ -32,7 +32,7 @@ CREATE TABLE complaints (
   subject TEXT NOT NULL,
   description TEXT NOT NULL,
   desired_outcome TEXT,
-  status TEXT NOT NULL DEFAULT 'Unassigned' CHECK (status IN ('Unassigned', 'In Progress', 'Resolved', 'Closed')),
+  status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Unassigned', 'In Progress', 'Resolved', 'Closed')),
   priority TEXT NOT NULL DEFAULT 'Medium' CHECK (priority IN ('Urgent', 'High', 'Medium', 'Low')),
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
   reporter_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,

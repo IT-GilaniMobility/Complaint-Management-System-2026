@@ -24,7 +24,7 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   Overdue: { bg: "bg-red-50", text: "text-red-900", icon: "text-red-600" },
 };
 
-export type SummaryKey = "Total" | "Unassigned" | "In Progress" | "Resolved" | "Closed" | "Overdue";
+export type SummaryKey = "Total" | "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed" | "Overdue";
 
 function buildCounts(complaints: Complaint[]) {
   const counts: Record<SummaryKey, number> = {

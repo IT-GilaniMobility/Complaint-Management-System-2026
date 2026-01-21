@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
   { label: "Complaints", href: "/complaints", icon: MessageSquare, group: "main" },
   { label: "Create Complaint", href: "/complaints/new", icon: FilePlus2, group: "main" },
   { label: "Users", href: "/admin/users", icon: Users, group: "admin" },
-  { label: "Categories", href: "/admin/categories", icon: FolderKanban, group: "admin" },
+
   { label: "Settings", href: "/admin/settings", icon: Settings, group: "admin" },
 ];
 

@@ -71,7 +71,7 @@ export function StatusDialog({
   onChangeStatus: (status: ComplaintStatus) => void;
 }) {
   const [status, setStatus] = useState<ComplaintStatus>(complaint?.status ?? "In Progress");
-  const statuses: ComplaintStatus[] = ["Unassigned", "In Progress", "Resolved", "Closed"];
+  const statuses: ComplaintStatus[] = ["Pending", "Unassigned", "In Progress", "Resolved", "Closed"];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

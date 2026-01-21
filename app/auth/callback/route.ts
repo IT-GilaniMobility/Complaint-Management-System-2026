@@ -7,8 +7,11 @@ export async function GET(request: Request) {
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
 
-  // Build the base URL properly - use env var for production, fallback to request URL
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${requestUrl.protocol}//${requestUrl.host}`;
+  // Build the base URL dynamically (handles Vercel proxies) with env override
+  const forwardedProto = request.headers.get("x-forwarded-proto") || requestUrl.protocol.replace(":", "");
+  const forwardedHost = request.headers.get("x-forwarded-host") || requestUrl.host;
+  const derivedBase = `${forwardedProto}://${forwardedHost}`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || derivedBase;
 
   // Handle OAuth errors
   if (error) {

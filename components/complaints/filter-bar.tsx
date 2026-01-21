@@ -58,7 +58,7 @@ export function FilterBar({
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
-              {["All", "Unassigned", "In Progress", "Resolved", "Closed", "Overdue"].map((status) => (
+              {["All", "Pending", "Unassigned", "In Progress", "Resolved", "Closed", "Overdue"].map((status) => (
                 <SelectItem key={status} value={status}>
                   {status}
                 </SelectItem>

@@ -1,6 +1,6 @@
 import { addDays, subDays } from "date-fns";
 
-export type ComplaintStatus = "Unassigned" | "In Progress" | "Resolved" | "Closed";
+export type ComplaintStatus = "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed";
 export type ComplaintPriority = "Low" | "Medium" | "High" | "Urgent";
 export type UserRole = "Admin" | "Lead Agent" | "Agent" | "Staff";
 
