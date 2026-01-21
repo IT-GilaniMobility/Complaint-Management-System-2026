@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/use-toast";
 import { updateComplaintAssigneeAction, updateComplaintStatusAction, createCommentAction } from "@/app/actions/complaints";
 
 type ComplaintStatus = Database["public"]["Tables"]["complaints"]["Row"]["status"];
+type ComplaintPriority = Database["public"]["Tables"]["complaints"]["Row"]["priority"];
 
 export default function ComplaintDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -218,7 +219,7 @@ export default function ComplaintDetailsPage() {
             <CardContent className="grid gap-3 sm:grid-cols-3 text-sm">
               <div>
                 <p className="text-muted-foreground">Priority</p>
-                <Badge className={priorityColors[ticket.priority] + " border mt-1"}>{ticket.priority}</Badge>
+                <Badge className={(priorityColors[ticket.priority as ComplaintPriority] || "") + " border mt-1"}>{ticket.priority}</Badge>
               </div>
               <div>
                 <p className="text-muted-foreground">Assignee</p>

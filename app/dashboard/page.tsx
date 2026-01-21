@@ -1,4 +1,5 @@
 import { ArrowUpRight, Calendar, Bell } from "lucide-react";
+import { redirect } from "next/navigation";
 
 import { SummaryCards } from "@/components/complaints/summary-cards";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
@@ -11,6 +12,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  
+  // Check if user is authenticated
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  if (!user || userError) {
+    redirect('/login');
+  }
   
   // Fetch recent complaints from database
   const { data: complaints, error } = await supabase

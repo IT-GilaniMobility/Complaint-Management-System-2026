@@ -62,11 +62,20 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setLoading(false);
-      
-      if (!user) {
+      try {
+        // Give the session a moment to be established
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        setLoading(false);
+        
+        if (!user) {
+          router.push('/login');
+        }
+      } catch (err) {
+        console.error("Error fetching user:", err);
+        setLoading(false);
         router.push('/login');
       }
     };
