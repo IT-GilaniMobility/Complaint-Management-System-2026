@@ -29,6 +29,7 @@ export type SummaryKey = "Total" | "Pending" | "Unassigned" | "In Progress" | "R
 function buildCounts(complaints: Complaint[]) {
   const counts: Record<SummaryKey, number> = {
     Total: complaints.length,
+    Pending: 0,
     Unassigned: 0,
     "In Progress": 0,
     Resolved: 0,

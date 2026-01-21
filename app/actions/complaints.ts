@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
 
-type ComplaintStatus = Database["public"]["Tables"]["complaints"]["Row"]["status"];
+type ComplaintStatus = "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed";
 import { addDays } from "date-fns";
 
 type CreateComplaintInput = {
@@ -146,7 +146,7 @@ export async function createComplaintAction(input: CreateComplaintInput) {
 
 export async function updateComplaintStatusAction(complaintId: string, status: ComplaintStatus) {
   const supabase: any = createServiceClient();
-  const updates: Database["public"]["Tables"]["complaints"]["Update"] = { status };
+  const updates = { status: status as any };
 
   // Capture user for audit trail
   const authSupabase = await createClient();

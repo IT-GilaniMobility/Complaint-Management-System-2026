@@ -17,7 +17,7 @@ import { complaintStatusLabel, formatDate, isOverdue, priorityColors, statusColo
 import { toast } from "@/components/ui/use-toast";
 import { updateComplaintAssigneeAction, updateComplaintStatusAction, createCommentAction } from "@/app/actions/complaints";
 
-type ComplaintStatus = Database["public"]["Tables"]["complaints"]["Row"]["status"];
+type ComplaintStatus = "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed";
 type ComplaintPriority = Database["public"]["Tables"]["complaints"]["Row"]["priority"];
 
 export default function ComplaintDetailsPage() {
