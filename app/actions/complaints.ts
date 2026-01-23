@@ -323,53 +323,54 @@ export async function createCommentAction(
 }
 
 export async function updateComplaintAssigneeAction(complaintId: string, assigneeId: string | null) {
-  const supabase: any = createServiceClient();
+  try {
+    const supabase: any = createServiceClient();
 
-  // Fetch current complaint to detect assignment change
-  const { data: currentComplaint, error: fetchError } = await supabase
-    .from("complaints")
-    .select("assigned_to_id, complaint_number, subject, description, priority, reporter:reporter_id(name)")
-    .eq("id", complaintId)
-    .single();
+    // Fetch current complaint to detect assignment change
+    const { data: currentComplaint, error: fetchError } = await supabase
+      .from("complaints")
+      .select("assigned_to_id, complaint_number, subject, description, priority, reporter:reporter_id(name)")
+      .eq("id", complaintId)
+      .single();
 
-  if (fetchError) {
-    throw new Error(fetchError.message || "Failed to fetch complaint");
-  }
+    if (fetchError) {
+      throw new Error(fetchError.message || "Failed to fetch complaint");
+    }
 
-  const previousAssigneeId = currentComplaint.assigned_to_id;
-  const assignmentChanged = previousAssigneeId !== assigneeId;
+    const previousAssigneeId = currentComplaint.assigned_to_id;
+    const assignmentChanged = previousAssigneeId !== assigneeId;
 
-  const updates: Database["public"]["Tables"]["complaints"]["Update"] = { assigned_to_id: assigneeId };
+    const updates: Database["public"]["Tables"]["complaints"]["Update"] = { assigned_to_id: assigneeId };
 
-  // Capture user for audit trail
-  const authSupabase = await createClient();
-  const { data: { user }, error: authError } = await authSupabase.auth.getUser();
-  if (authError) {
-    console.warn("Assignment change proceeding without auth user", authError.message);
-  }
+    // Capture user for audit trail
+    const authSupabase = await createClient();
+    const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+    if (authError) {
+      console.warn("Assignment change proceeding without auth user", authError.message);
+    }
 
-  const { data, error } = await supabase
-    .from("complaints")
-    .update(updates)
-    .eq("id", complaintId)
-    .select(`
-      id,
-      status,
-      assigned_to_id,
-      priority,
-      complaint_number,
-      subject,
-      description,
-      created_at,
-      due_date,
-      category_id,
-      assigned_to:assigned_to_id(id, name, email, role)
-    `)
-    .single();
+    const { data, error } = await supabase
+      .from("complaints")
+      .update(updates)
+      .eq("id", complaintId)
+      .select(`
+        id,
+        status,
+        assigned_to_id,
+        priority,
+        complaint_number,
+        subject,
+        description,
+        created_at,
+        due_date,
+        category_id,
+        assigned_to:assigned_to_id(id, name, email, role)
+      `)
+      .single();
 
-  if (error) {
-    throw new Error(error.message || "Failed to update assignee");
-  }
+    if (error) {
+      throw new Error(error.message || "Failed to update assignee");
+    }
 
   // Log activity (best-effort)
   if (user?.id) {
@@ -391,7 +392,6 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
     try {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       const complaintUrl = `${appUrl}/complaints/${complaintId}`;
-      const customerName = currentComplaint.reporter?.name || "Customer";
 
       const emailHtml = generateAssignmentEmailTemplate({
         complaintNumber: data.complaint_number || "Unknown",
@@ -432,4 +432,8 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
   revalidatePath(`/complaints/${complaintId}`);
 
   return data;
+  } catch (error: any) {
+    console.error("updateComplaintAssigneeAction error:", error);
+    throw error;
+  }
 }
