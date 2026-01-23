@@ -396,7 +396,7 @@ export default function ComplaintDetailsPage() {
       <AssignDialog
         open={assignOpen}
         complaint={ticket}
-        users={users.filter((u) => u.role === "Agent" || u.role === "Lead Agent")}
+        users={users.filter((u) => u.role === "Agent" || u.role === "Lead Agent" || u.role === "Admin")}
         onOpenChange={setAssignOpen}
         onAssign={handleAssign}
       />

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { categories, users } from "@/lib/mock-data";
+import { categories } from "@/lib/mock-data";
 import { complaintStatusLabel, isOverdue } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +29,7 @@ const initialFilters: ComplaintFilters = {
 
 export default function ComplaintsPage() {
   const [rows, setRows] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [filters, setFilters] = useState<ComplaintFilters>(initialFilters);
   const [activeTab, setActiveTab] = useState<SummaryKey>("Total");
   const [loading, setLoading] = useState(true);
@@ -36,9 +37,11 @@ export default function ComplaintsPage() {
   const [statusTarget, setStatusTarget] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchComplaints = async () => {
+    const fetchData = async () => {
       const supabase = createClient();
-      const { data, error } = await supabase
+      
+      // Fetch complaints
+      const { data: complaintsData } = await supabase
         .from("complaints")
         .select(`
           *,
@@ -48,9 +51,15 @@ export default function ComplaintsPage() {
         `)
         .order("created_at", { ascending: false });
 
-      if (data) {
+      // Fetch users
+      const { data: usersData } = await supabase
+        .from("users")
+        .select("id, name, email, role")
+        .order("name");
+
+      if (complaintsData) {
         // Transform to match expected format
-        const transformed = data.map((c: any) => ({
+        const transformed = complaintsData.map((c: any) => ({
           id: c.id,
           number: c.complaint_number,
           subject: c.subject,
@@ -68,10 +77,15 @@ export default function ComplaintsPage() {
         }));
         setRows(transformed);
       }
+
+      if (usersData) {
+        setUsers(usersData);
+      }
+
       setLoading(false);
     };
 
-    fetchComplaints();
+    fetchData();
   }, []);
 
   const filteredRows = useMemo(() => {
@@ -230,7 +244,7 @@ export default function ComplaintsPage() {
       <AssignDialog
         open={!!assignTarget}
         complaint={selectedAssign}
-        users={users.filter((u) => u.role === "Agent" || u.role === "Lead Agent")}
+        users={users.filter((u) => u.role === "Agent" || u.role === "Lead Agent" || u.role === "Admin")}
         onOpenChange={(open) => !open && setAssignTarget(null)}
         onAssign={handleAssign}
       />

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
+import { sendEmail, generateAssignmentEmailTemplate } from "@/lib/email/notification";
 
 type ComplaintStatus = "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed";
 import { addDays } from "date-fns";
@@ -307,7 +308,7 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
       created_at,
       due_date,
       category_id,
-      assigned_to:assigned_to_id(id, name, role)
+      assigned_to:assigned_to_id(id, name, email, role)
     `)
     .single();
 
@@ -328,6 +329,50 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
     if (activityError) {
       console.error("Failed to log activity:", activityError);
     }
+  }
+
+  // Send email notification to it@gilanimobility.ae
+  if (assigneeId && data?.assigned_to) {
+    console.log("📧 Attempting to send email notification...");
+    console.log("Assigned to:", data.assigned_to);
+    
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const complaintUrl = `${appUrl}/complaints/${complaintId}`;
+      const dueDate = data.due_date ? new Date(data.due_date).toLocaleDateString() : "Not set";
+
+      const emailHtml = generateAssignmentEmailTemplate({
+        complaintNumber: data.complaint_number || "Unknown",
+        subject: data.subject || "",
+        description: data.description || "",
+        priority: data.priority || "Medium",
+        assignedTo: data.assigned_to?.name || "Team Member",
+        dueDate,
+        complaintUrl,
+      });
+
+      // Send to it@gilanimobility.ae and the assigned agent's email if available
+      const recipients = ["it@gilanimobility.ae"];
+      if (data.assigned_to?.email) {
+        recipients.push(data.assigned_to.email);
+      }
+
+      console.log("📧 Sending to recipients:", recipients);
+
+      for (const recipient of recipients) {
+        sendEmail({
+          to: recipient,
+          subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
+          html: emailHtml,
+        })
+        .then(() => console.log(`✅ Email sent successfully to ${recipient}`))
+        .catch((err) => console.error(`❌ Failed to send email to ${recipient}:`, err));
+      }
+    } catch (emailError) {
+      console.error("❌ Error sending assignment notification:", emailError);
+    }
+  } else {
+    console.log("ℹ️  Email not sent - assigneeId:", assigneeId, "assigned_to:", data?.assigned_to);
   }
 
   revalidatePath("/complaints");
