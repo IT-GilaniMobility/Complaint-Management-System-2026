@@ -28,14 +28,27 @@ export async function GET(request: Request) {
       // Prepare a redirect response and bind cookies to it so Supabase can write auth cookies
       let response = NextResponse.redirect(new URL("/dashboard", baseUrl));
 
-      const cookieStore = await cookies();
+      // Read incoming cookies from request headers (avoid type issues)
+      const incomingCookieHeader = request.headers.get("cookie") || "";
+      const readCookie = (name: string) => {
+        const parts = incomingCookieHeader.split(/;\s*/);
+        for (const part of parts) {
+          const idx = part.indexOf("=");
+          if (idx > -1) {
+            const k = part.slice(0, idx);
+            const v = part.slice(idx + 1);
+            if (k === name) return decodeURIComponent(v);
+          }
+        }
+        return undefined;
+      };
       const supabase = createServerClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
             get(name: string) {
-              return cookieStore.get(name)?.value;
+              return readCookie(name);
             },
             set(name: string, value: string, options: any) {
               response.cookies.set({ name, value, ...options });
