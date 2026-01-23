@@ -399,19 +399,31 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
         recipients.push(data.assigned_to.email);
       }
 
-      console.log("📧 Sending to recipients:", recipients);
+      console.log("📧 Sending to recipients via API:", recipients);
 
       for (const recipient of recipients) {
-        console.log(`Calling sendEmail for ${recipient}...`);
-        const sent = await sendEmail({
-          to: recipient,
-          subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
-          html: emailHtml,
-        });
-        if (sent) {
-          console.log(`✅ Email sent successfully to ${recipient}`);
-        } else {
-          console.error(`❌ Failed to send email to ${recipient}`);
+        try {
+          console.log(`Calling email API for ${recipient}...`);
+          const apiUrl = `${appUrl}/api/send-email`;
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: recipient,
+              subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
+              html: emailHtml,
+              type: "assignment",
+            }),
+          });
+
+          if (response.ok) {
+            console.log(`✅ Email API call succeeded for ${recipient}`);
+          } else {
+            const error = await response.text();
+            console.error(`❌ Email API call failed for ${recipient}:`, error);
+          }
+        } catch (fetchError) {
+          console.error(`❌ Error calling email API for ${recipient}:`, fetchError);
         }
       }
     } catch (emailError) {
