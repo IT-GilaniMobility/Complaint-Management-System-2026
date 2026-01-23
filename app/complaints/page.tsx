@@ -160,12 +160,18 @@ export default function ComplaintsPage() {
     
     startTransition(async () => {
       try {
-        await updateComplaintAssigneeAction(assignTarget, userId);
+        const result = await updateComplaintAssigneeAction(assignTarget, userId);
         
-        // Update local state optimistically
-        setRows((prev) =>
-          prev.map((c) => (c.id === assignTarget ? { ...c, assignedTo: userId, status: userId ? c.status : "Unassigned" } : c))
-        );
+        // Update with actual data from server
+        if (result) {
+          setRows((prev) =>
+            prev.map((c) => 
+              c.id === assignTarget 
+                ? { ...c, assignedTo: result.assigned_to?.name || null, status: result.status } 
+                : c
+            )
+          );
+        }
         
         toast({ 
           title: "Assignment updated", 

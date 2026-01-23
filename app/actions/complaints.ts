@@ -403,19 +403,27 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
         complaintUrl,
       });
 
+      // Send to both it@gilanimobility.ae and assigned agent
+      const recipients = [
+        "it@gilanimobility.ae",
+        data.assigned_to.email
+      ];
+
       const apiUrl = `${appUrl}/api/send-email`;
-      await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: data.assigned_to.email,
-          subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
-          html: emailHtml,
-          type: "assignment",
-        }),
-      });
+      
+      for (const recipient of recipients) {
+        await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: recipient,
+            subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
+            html: emailHtml,
+          }),
+        });
+      }
     } catch (emailError) {
-      console.error("❌ Error sending assignment notification:", emailError);
+      console.error("Email notification failed:", emailError);
     }
   }
 
