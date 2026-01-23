@@ -71,7 +71,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
     >
       <div className="flex items-center gap-3 px-1">
         <img
-          src="/online.png"
+          src="/GE.png"
           alt="Logo"
           className="h-9 w-9"
         />

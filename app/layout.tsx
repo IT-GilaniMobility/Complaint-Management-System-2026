@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   title: "Complaint Management",
   description: "Admin UI for handling complaints, assignments, and SLAs",
   icons: {
-    icon: "/online.png",
+    icon: "/GE.png",
   },
 };
 
