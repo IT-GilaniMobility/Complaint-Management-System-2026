@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -16,6 +16,7 @@ import { categories } from "@/lib/mock-data";
 import { complaintStatusLabel, isOverdue } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
+import { updateComplaintAssigneeAction, updateComplaintStatusAction } from "@/app/actions/complaints";
 
 const tabs: SummaryKey[] = ["Total", "Unassigned", "In Progress", "Resolved", "Closed"];
 
@@ -35,6 +36,7 @@ export default function ComplaintsPage() {
   const [loading, setLoading] = useState(true);
   const [assignTarget, setAssignTarget] = useState<string | null>(null);
   const [statusTarget, setStatusTarget] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -153,20 +155,55 @@ export default function ComplaintsPage() {
     else setFilters((prev) => ({ ...prev, status: key }));
   };
 
-  const handleAssign = (userId: string | null) => {
+  const handleAssign = async (userId: string | null) => {
     if (!assignTarget) return;
-    setRows((prev) =>
-      prev.map((c) => (c.id === assignTarget ? { ...c, assignedTo: userId, status: userId ? c.status : "Unassigned" } : c))
-    );
-    setAssignTarget(null);
-    toast({ title: "Assignment updated", description: userId ? "Assigned to agent" : "Complaint returned to queue" });
+    
+    startTransition(async () => {
+      try {
+        await updateComplaintAssigneeAction(assignTarget, userId);
+        
+        // Update local state optimistically
+        setRows((prev) =>
+          prev.map((c) => (c.id === assignTarget ? { ...c, assignedTo: userId, status: userId ? c.status : "Unassigned" } : c))
+        );
+        
+        toast({ 
+          title: "Assignment updated", 
+          description: userId ? "Assigned to agent - email notification sent" : "Complaint returned to queue" 
+        });
+      } catch (error: any) {
+        toast({ 
+          title: "Assignment failed", 
+          description: error.message || "Failed to update assignment",
+          variant: "destructive"
+        });
+      } finally {
+        setAssignTarget(null);
+      }
+    });
   };
 
-  const handleStatus = (status: string) => {
+  const handleStatus = async (status: string) => {
     if (!statusTarget) return;
-    setRows((prev) => prev.map((c) => (c.id === statusTarget ? { ...c, status: status as any } : c)));
-    setStatusTarget(null);
-    toast({ title: "Status changed", description: `Moved to ${status}` });
+    
+    startTransition(async () => {
+      try {
+        await updateComplaintStatusAction(statusTarget, status as any);
+        
+        // Update local state
+        setRows((prev) => prev.map((c) => (c.id === statusTarget ? { ...c, status: status as any } : c)));
+        
+        toast({ title: "Status changed", description: `Moved to ${status}` });
+      } catch (error: any) {
+        toast({ 
+          title: "Status update failed", 
+          description: error.message || "Failed to update status",
+          variant: "destructive"
+        });
+      } finally {
+        setStatusTarget(null);
+      }
+    });
   };
 
   const showEmpty = !loading && filteredRows.length === 0;
