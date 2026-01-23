@@ -22,15 +22,16 @@ type CreateComplaintInput = {
 };
 
 export async function createComplaintAction(input: CreateComplaintInput) {
-  const supabase = createServiceClient();
-  
-  // Get authenticated user
-  const authSupabase = await createClient();
-  const { data: { user }, error: authError } = await authSupabase.auth.getUser();
-  
-  if (authError || !user) {
-    throw new Error("You must be logged in to create a complaint");
-  }
+  try {
+    const supabase = createServiceClient();
+    
+    // Get authenticated user
+    const authSupabase = await createClient();
+    const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error("You must be logged in to create a complaint");
+    }
 
   // Map categories to seeded IDs or create new ones
   const seededIds = {
@@ -131,6 +132,12 @@ export async function createComplaintAction(input: CreateComplaintInput) {
     .single();
 
   if (error) {
+    console.error("Create complaint error:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
     throw new Error(
       JSON.stringify({
         message: error.message,
@@ -143,6 +150,10 @@ export async function createComplaintAction(input: CreateComplaintInput) {
 
   revalidatePath("/complaints");
   return { success: true, complaintNumber: (data as any).complaint_number };
+  } catch (error: any) {
+    console.error("createComplaintAction failed:", error);
+    throw error;
+  }
 }
 
 export async function updateComplaintStatusAction(complaintId: string, status: ComplaintStatus) {

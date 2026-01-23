@@ -46,7 +46,7 @@ export async function GET(request: Request) {
         }
       );
 
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
         console.error("Session exchange error:", exchangeError.message);
@@ -55,9 +55,28 @@ export async function GET(request: Request) {
         );
       }
 
+      // Verify session was created successfully
+      if (!sessionData?.session) {
+        console.error("No session created after code exchange");
+        return NextResponse.redirect(
+          new URL(`/login?error=auth_failed&message=Session creation failed`, baseUrl)
+        );
+      }
+
       // Redirect to dashboard after successful authentication
       console.log("Session exchange success, redirecting to /dashboard");
-      return NextResponse.redirect(new URL("/dashboard", baseUrl));
+      const response = NextResponse.redirect(new URL("/dashboard", baseUrl));
+      
+      // Ensure cookies are set on the response
+      response.cookies.set('sb-auth-token', sessionData.session.access_token, {
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      });
+      
+      return response;
     } catch (err) {
       console.error("Unexpected error in callback:", err);
       return NextResponse.redirect(
