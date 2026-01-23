@@ -34,6 +34,7 @@ export async function GET(request: Request) {
       }
 
       // Redirect to dashboard after successful authentication
+      console.log("Session exchange success, redirecting to /dashboard");
       return NextResponse.redirect(new URL("/dashboard", baseUrl));
     } catch (err) {
       console.error("Unexpected error in callback:", err);
