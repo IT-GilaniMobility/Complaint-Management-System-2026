@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       // Prepare a redirect response and bind cookies to it so Supabase can write auth cookies
       let response = NextResponse.redirect(new URL("/dashboard", baseUrl));
 
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       const supabase = createServerClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
