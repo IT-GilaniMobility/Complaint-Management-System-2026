@@ -324,6 +324,21 @@ export async function createCommentAction(
 
 export async function updateComplaintAssigneeAction(complaintId: string, assigneeId: string | null) {
   const supabase: any = createServiceClient();
+
+  // Fetch current complaint to detect assignment change
+  const { data: currentComplaint, error: fetchError } = await supabase
+    .from("complaints")
+    .select("assigned_to_id, complaint_number, subject, description, priority, reporter:reporter_id(name)")
+    .eq("id", complaintId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(fetchError.message || "Failed to fetch complaint");
+  }
+
+  const previousAssigneeId = currentComplaint.assigned_to_id;
+  const assignmentChanged = previousAssigneeId !== assigneeId;
+
   const updates: Database["public"]["Tables"]["complaints"]["Update"] = { assigned_to_id: assigneeId };
 
   // Capture user for audit trail
@@ -371,66 +386,37 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
     }
   }
 
-  // Send email notification to it@gilanimobility.ae
-  console.log("🔍 Email check - assigneeId:", assigneeId, "data?.assigned_to:", data?.assigned_to);
-  
-  if (assigneeId && data?.assigned_to) {
-    console.log("📧 Attempting to send email notification...");
-    console.log("Assigned to:", data.assigned_to);
-    
+  // Send email ONLY if assignment changed
+  if (assignmentChanged && assigneeId && data?.assigned_to?.email) {
     try {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       const complaintUrl = `${appUrl}/complaints/${complaintId}`;
-      const dueDate = data.due_date ? new Date(data.due_date).toLocaleDateString() : "Not set";
+      const customerName = currentComplaint.reporter?.name || "Customer";
 
       const emailHtml = generateAssignmentEmailTemplate({
         complaintNumber: data.complaint_number || "Unknown",
         subject: data.subject || "",
         description: data.description || "",
         priority: data.priority || "Medium",
-        assignedTo: data.assigned_to?.name || "Team Member",
-        dueDate,
+        assignedTo: data.assigned_to.name || "Team Member",
+        dueDate: data.due_date ? new Date(data.due_date).toLocaleDateString() : "Not set",
         complaintUrl,
       });
 
-      // Send to it@gilanimobility.ae and the assigned agent's email if available
-      const recipients = ["it@gilanimobility.ae"];
-      if (data.assigned_to?.email) {
-        recipients.push(data.assigned_to.email);
-      }
-
-      console.log("📧 Sending to recipients via API:", recipients);
-
-      for (const recipient of recipients) {
-        try {
-          console.log(`Calling email API for ${recipient}...`);
-          const apiUrl = `${appUrl}/api/send-email`;
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              to: recipient,
-              subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
-              html: emailHtml,
-              type: "assignment",
-            }),
-          });
-
-          if (response.ok) {
-            console.log(`✅ Email API call succeeded for ${recipient}`);
-          } else {
-            const error = await response.text();
-            console.error(`❌ Email API call failed for ${recipient}:`, error);
-          }
-        } catch (fetchError) {
-          console.error(`❌ Error calling email API for ${recipient}:`, fetchError);
-        }
-      }
+      const apiUrl = `${appUrl}/api/send-email`;
+      await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: data.assigned_to.email,
+          subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
+          html: emailHtml,
+          type: "assignment",
+        }),
+      });
     } catch (emailError) {
       console.error("❌ Error sending assignment notification:", emailError);
     }
-  } else {
-    console.log("ℹ️  Email not sent - assigneeId:", assigneeId, "assigned_to:", data?.assigned_to);
   }
 
   revalidatePath("/complaints");

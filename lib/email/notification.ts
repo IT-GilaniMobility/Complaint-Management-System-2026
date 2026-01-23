@@ -1,6 +1,4 @@
 import nodemailer from "nodemailer";
-import fs from "fs";
-import path from "path";
 
 export interface EmailNotification {
   to: string;
@@ -12,44 +10,13 @@ let transporter: any = null;
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-// Log to file so we can see what's happening in server actions
-function logToFile(message: string) {
-  const logPath = path.join(process.cwd(), ".logs", "email.log");
-  const dir = path.dirname(logPath);
-  
-  try {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    const timestamp = new Date().toISOString();
-    fs.appendFileSync(logPath, `[${timestamp}] ${message}\n`);
-    console.log(message); // Also log to console
-  } catch (err) {
-    console.error("Failed to write to log file:", err);
-  }
-}
-
 async function sendWithResend(notification: EmailNotification): Promise<boolean> {
   if (!RESEND_API_KEY) {
-    logToFile("[Resend] RESEND_API_KEY not set, skipping Resend");
     return false;
   }
 
   try {
-    logToFile(`📧 [Resend] Attempting to send email to ${notification.to}...`);
-    logToFile(`[Resend] Using API Key: ${RESEND_API_KEY.substring(0, 10)}...`);
-
-    // Use default Resend sender or fallback to onboarding email
     const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
-    logToFile(`[Resend] Sending from: ${fromEmail}`);
-
-    const body = JSON.stringify({
-      from: fromEmail,
-      to: [notification.to],
-      subject: notification.subject,
-      html: notification.html,
-    });
-    logToFile(`[Resend] Request body keys: from, to, subject, html`);
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -57,22 +24,25 @@ async function sendWithResend(notification: EmailNotification): Promise<boolean>
         "Content-Type": "application/json",
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
-      body,
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [notification.to],
+        subject: notification.subject,
+        html: notification.html,
+      }),
     });
 
-    const responseText = await response.text();
-    logToFile(`[Resend] Response status: ${response.status}`);
-
     if (!response.ok) {
-      logToFile(`❌ [Resend] Failed to send email to ${notification.to}: ${responseText}`);
+      const responseText = await response.text();
+      console.error(`[Resend] Failed (${response.status}):`, responseText);
       return false;
     }
 
-    const data = JSON.parse(responseText);
-    logToFile(`✅ [Resend] Email sent successfully to ${notification.to} (ID: ${data.id || "N/A"})`);
+    const data = await response.json();
+    console.log(`[Resend] Email sent to ${notification.to} (ID: ${data.id})`);
     return true;
   } catch (error: any) {
-    logToFile(`❌ [Resend] Error sending email to ${notification.to}: ${error?.message || error}`);
+    console.error(`[Resend] Error:`, error?.message || error);
     return false;
   }
 }
@@ -102,31 +72,28 @@ function getTransporter() {
 }
 
 export async function sendEmail(notification: EmailNotification): Promise<boolean> {
-  // Try Resend first if configured
   if (RESEND_API_KEY) {
     const sent = await sendWithResend(notification);
     if (sent) return true;
-    // fall through to SMTP if Resend fails
   }
 
   const transport = getTransporter();
   if (!transport) {
-    logToFile("❌ Email service not configured - missing SMTP settings and RESEND_API_KEY not set");
+    console.error("Email service not configured");
     return false;
   }
 
   try {
-    logToFile(`📧 Attempting to send email to ${notification.to}...`);
     const info = await transport.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: notification.to,
       subject: notification.subject,
       html: notification.html,
     });
-    logToFile(`✅ Email sent successfully to ${notification.to} (ID: ${info.messageId})`);
+    console.log(`Email sent to ${notification.to} (ID: ${info.messageId})`);
     return true;
   } catch (error: any) {
-    logToFile(`❌ Failed to send email to ${notification.to}: ${error.message || error}`);
+    console.error(`Failed to send email to ${notification.to}:`, error.message);
     return false;
   }
 }
