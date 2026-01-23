@@ -51,10 +51,10 @@ export async function GET(request: Request) {
               return readCookie(name);
             },
             set(name: string, value: string, options: any) {
-              response.cookies.set({ name, value, ...options });
+              response.cookies.set({ name, value, ...options, sameSite: "lax", secure: false });
             },
             remove(name: string, options: any) {
-              response.cookies.set({ name, value: "", ...options });
+              response.cookies.set({ name, value: "", ...options, sameSite: "lax", secure: false });
             },
           },
         }

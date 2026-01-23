@@ -11,10 +11,26 @@ let transporter: any = null;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 async function sendWithResend(notification: EmailNotification): Promise<boolean> {
-  if (!RESEND_API_KEY) return false;
+  if (!RESEND_API_KEY) {
+    console.log("[Resend] RESEND_API_KEY not set, skipping Resend");
+    return false;
+  }
 
   try {
     console.log(`📧 [Resend] Attempting to send email to ${notification.to}...`);
+    console.log(`[Resend] Using API Key: ${RESEND_API_KEY.substring(0, 10)}...`);
+
+    // Use default Resend sender or fallback to onboarding email
+    const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
+    console.log(`[Resend] Sending from: ${fromEmail}`);
+
+    const body = JSON.stringify({
+      from: fromEmail,
+      to: [notification.to],
+      subject: notification.subject,
+      html: notification.html,
+    });
+    console.log(`[Resend] Request body keys: from, to, subject, html`);
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -22,21 +38,18 @@ async function sendWithResend(notification: EmailNotification): Promise<boolean>
         "Content-Type": "application/json",
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        to: [notification.to],
-        subject: notification.subject,
-        html: notification.html,
-      }),
+      body,
     });
 
+    const responseText = await response.text();
+    console.log(`[Resend] Response status: ${response.status}`);
+
     if (!response.ok) {
-      const text = await response.text();
-      console.error(`❌ [Resend] Failed to send email to ${notification.to}:`, text);
+      console.error(`❌ [Resend] Failed to send email to ${notification.to}:`, responseText);
       return false;
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     console.log(`✅ [Resend] Email sent successfully to ${notification.to}`, data.id || "");
     return true;
   } catch (error: any) {

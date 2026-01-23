@@ -400,13 +400,16 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
       console.log("📧 Sending to recipients:", recipients);
 
       for (const recipient of recipients) {
-        sendEmail({
+        const sent = await sendEmail({
           to: recipient,
           subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
           html: emailHtml,
-        })
-        .then(() => console.log(`✅ Email sent successfully to ${recipient}`))
-        .catch((err) => console.error(`❌ Failed to send email to ${recipient}:`, err));
+        });
+        if (sent) {
+          console.log(`✅ Email sent successfully to ${recipient}`);
+        } else {
+          console.error(`❌ Failed to send email to ${recipient}`);
+        }
       }
     } catch (emailError) {
       console.error("❌ Error sending assignment notification:", emailError);
