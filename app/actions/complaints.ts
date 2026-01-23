@@ -372,6 +372,8 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
   }
 
   // Send email notification to it@gilanimobility.ae
+  console.log("🔍 Email check - assigneeId:", assigneeId, "data?.assigned_to:", data?.assigned_to);
+  
   if (assigneeId && data?.assigned_to) {
     console.log("📧 Attempting to send email notification...");
     console.log("Assigned to:", data.assigned_to);
@@ -400,6 +402,7 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
       console.log("📧 Sending to recipients:", recipients);
 
       for (const recipient of recipients) {
+        console.log(`Calling sendEmail for ${recipient}...`);
         const sent = await sendEmail({
           to: recipient,
           subject: `Complaint #${data.complaint_number} Assigned - ${data.subject}`,
