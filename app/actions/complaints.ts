@@ -23,15 +23,26 @@ type CreateComplaintInput = {
 
 export async function createComplaintAction(input: CreateComplaintInput) {
   try {
+    console.log('Creating complaint with input:', { ...input, description: input.description?.substring(0, 50) + '...' });
+    
     const supabase = createServiceClient();
+    console.log('Service client created successfully');
     
     // Get authenticated user
     const authSupabase = await createClient();
     const { data: { user }, error: authError } = await authSupabase.auth.getUser();
     
-    if (authError || !user) {
+    if (authError) {
+      console.error('Auth error in createComplaint:', authError);
       throw new Error("You must be logged in to create a complaint");
     }
+    
+    if (!user) {
+      console.error('No user found in createComplaint');
+      throw new Error("You must be logged in to create a complaint");
+    }
+    
+    console.log('User authenticated:', user.id);
 
   // Map categories to seeded IDs or create new ones
   const seededIds = {
@@ -112,22 +123,27 @@ export async function createComplaintAction(input: CreateComplaintInput) {
   }
 
   // Insert complaint
+  console.log('Inserting complaint with categoryId:', categoryId);
+  const complaintData = {
+    subject: input.subject,
+    description: input.description,
+    desired_outcome: input.desiredOutcome || null,
+    category_id: categoryId!,
+    priority: input.priority,
+    reporter_id: user.id,
+    assigned_to_id: null,
+    customer_name: input.branch || null,
+    customer_email: input.email || null,
+    customer_phone: input.phone || null,
+    due_date: addDays(new Date(), 3).toISOString(),
+    status: "Unassigned",
+  } as any;
+  
+  console.log('Complaint data to insert:', { ...complaintData, description: complaintData.description?.substring(0, 50) + '...' });
+  
   const { data, error } = await supabase
     .from("complaints")
-    .insert({
-      subject: input.subject,
-      description: input.description,
-      desired_outcome: input.desiredOutcome || null,
-      category_id: categoryId!,
-      priority: input.priority,
-      reporter_id: user.id, // Use authenticated user's ID
-      assigned_to_id: null,
-      customer_name: input.branch || null,
-      customer_email: input.email || null,
-      customer_phone: input.phone || null,
-      due_date: addDays(new Date(), 3).toISOString(),
-      status: "Unassigned",
-    } as any)
+    .insert(complaintData)
     .select("complaint_number")
     .single();
 
