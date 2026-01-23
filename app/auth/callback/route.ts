@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
 
-  // Build the base URL dynamically (handles Vercel proxies) with env override
+  // Build the base URL dynamically
   const forwardedProto = request.headers.get("x-forwarded-proto") || requestUrl.protocol.replace(":", "");
   const forwardedHost = request.headers.get("x-forwarded-host") || requestUrl.host;
   const baseUrl = `${forwardedProto}://${forwardedHost}`;
@@ -25,36 +25,22 @@ export async function GET(request: Request) {
 
   if (code) {
     try {
-      // Prepare a redirect response and bind cookies to it so Supabase can write auth cookies
-      let response = NextResponse.redirect(new URL("/dashboard", baseUrl));
-
-      // Read incoming cookies from request headers (avoid type issues)
-      const incomingCookieHeader = request.headers.get("cookie") || "";
-      const readCookie = (name: string) => {
-        const parts = incomingCookieHeader.split(/;\s*/);
-        for (const part of parts) {
-          const idx = part.indexOf("=");
-          if (idx > -1) {
-            const k = part.slice(0, idx);
-            const v = part.slice(idx + 1);
-            if (k === name) return decodeURIComponent(v);
-          }
-        }
-        return undefined;
-      };
+      // Get cookies for Supabase
+      const cookieStore = await cookies();
+      
       const supabase = createServerClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
             get(name: string) {
-              return readCookie(name);
+              return cookieStore.get(name)?.value;
             },
             set(name: string, value: string, options: any) {
-              response.cookies.set({ name, value, ...options });
+              cookieStore.set(name, value, options);
             },
             remove(name: string, options: any) {
-              response.cookies.set({ name, value: "", ...options });
+              cookieStore.set(name, "", { ...options, maxAge: 0 });
             },
           },
         }
@@ -64,15 +50,14 @@ export async function GET(request: Request) {
 
       if (exchangeError) {
         console.error("Session exchange error:", exchangeError.message);
-        response = NextResponse.redirect(
+        return NextResponse.redirect(
           new URL(`/login?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`, baseUrl)
         );
-        return response;
       }
 
       // Redirect to dashboard after successful authentication
       console.log("Session exchange success, redirecting to /dashboard");
-      return response;
+      return NextResponse.redirect(new URL("/dashboard", baseUrl));
     } catch (err) {
       console.error("Unexpected error in callback:", err);
       return NextResponse.redirect(
