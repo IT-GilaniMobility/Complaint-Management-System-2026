@@ -24,11 +24,22 @@ export async function middleware(req: NextRequest) {
   );
 
   // Refresh the session so Server Components can read it
-  await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) {
+    console.warn("[middleware] getUser error:", error.message);
+  }
+  if (user) {
+    // bind refreshed cookies to response
+    // Supabase client will have called set/remove above as needed.
+    // no-op: presence of user indicates session cookie exists.
+  }
 
   return res;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    // Exclude callback and static assets from middleware to avoid interference
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback).*)",
+  ],
 };
