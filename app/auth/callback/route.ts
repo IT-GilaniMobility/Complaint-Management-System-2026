@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/lib/supabase/database.types";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -23,19 +25,41 @@ export async function GET(request: Request) {
 
   if (code) {
     try {
-      const supabase = await createClient();
+      // Prepare a redirect response and bind cookies to it so Supabase can write auth cookies
+      let response = NextResponse.redirect(new URL("/dashboard", baseUrl));
+
+      const cookieStore = cookies();
+      const supabase = createServerClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return cookieStore.get(name)?.value;
+            },
+            set(name: string, value: string, options: any) {
+              response.cookies.set({ name, value, ...options });
+            },
+            remove(name: string, options: any) {
+              response.cookies.set({ name, value: "", ...options });
+            },
+          },
+        }
+      );
+
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
         console.error("Session exchange error:", exchangeError.message);
-        return NextResponse.redirect(
+        response = NextResponse.redirect(
           new URL(`/login?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`, baseUrl)
         );
+        return response;
       }
 
       // Redirect to dashboard after successful authentication
       console.log("Session exchange success, redirecting to /dashboard");
-      return NextResponse.redirect(new URL("/dashboard", baseUrl));
+      return response;
     } catch (err) {
       console.error("Unexpected error in callback:", err);
       return NextResponse.redirect(
