@@ -10,8 +10,7 @@ export async function GET(request: Request) {
   // Build the base URL dynamically (handles Vercel proxies) with env override
   const forwardedProto = request.headers.get("x-forwarded-proto") || requestUrl.protocol.replace(":", "");
   const forwardedHost = request.headers.get("x-forwarded-host") || requestUrl.host;
-  const derivedBase = `${forwardedProto}://${forwardedHost}`;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || derivedBase;
+  const baseUrl = `${forwardedProto}://${forwardedHost}`;
 
   // Handle OAuth errors
   if (error) {
