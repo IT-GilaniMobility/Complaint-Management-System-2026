@@ -8,6 +8,43 @@ export interface EmailNotification {
 
 let transporter: any = null;
 
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
+async function sendWithResend(notification: EmailNotification): Promise<boolean> {
+  if (!RESEND_API_KEY) return false;
+
+  try {
+    console.log(`📧 [Resend] Attempting to send email to ${notification.to}...`);
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: [notification.to],
+        subject: notification.subject,
+        html: notification.html,
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`❌ [Resend] Failed to send email to ${notification.to}:`, text);
+      return false;
+    }
+
+    const data = await response.json();
+    console.log(`✅ [Resend] Email sent successfully to ${notification.to}`, data.id || "");
+    return true;
+  } catch (error: any) {
+    console.error(`❌ [Resend] Error sending email to ${notification.to}:`, error?.message || error);
+    return false;
+  }
+}
+
 function getTransporter() {
   if (transporter) return transporter;
 
@@ -33,9 +70,16 @@ function getTransporter() {
 }
 
 export async function sendEmail(notification: EmailNotification): Promise<boolean> {
+  // Try Resend first if configured
+  if (RESEND_API_KEY) {
+    const sent = await sendWithResend(notification);
+    if (sent) return true;
+    // fall through to SMTP if Resend fails
+  }
+
   const transport = getTransporter();
   if (!transport) {
-    console.error("❌ Email service not configured - missing EMAIL_HOST, EMAIL_USER, or EMAIL_PASSWORD");
+    console.error("❌ Email service not configured - missing SMTP settings and RESEND_API_KEY not set");
     return false;
   }
 

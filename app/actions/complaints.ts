@@ -278,6 +278,46 @@ export async function createCommentAction(
     console.error("Failed to log comment activity:", activityError);
   }
 
+  // Notify IT on any new comment (public or internal)
+  try {
+    const { data: complaint } = await supabase
+      .from("complaints")
+      .select(
+        `
+        complaint_number,
+        subject,
+        assigned_to:assigned_to_id(email, name)
+      `
+      )
+      .eq("id", complaintId)
+      .single();
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const complaintUrl = `${appUrl}/complaints/${complaintId}`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a;">
+        <h2 style="margin: 0 0 8px 0;">New comment on complaint #${complaint?.complaint_number || ""}</h2>
+        <p style="margin: 0 0 12px 0;">${isInternal ? "Internal" : "Public"} comment by ${user.email}</p>
+        <div style="padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <div style="font-weight: 600; margin-bottom: 6px;">Message:</div>
+          <div style="white-space: pre-wrap;">${message}</div>
+        </div>
+        <p style="margin: 12px 0 0 0;">Subject: ${complaint?.subject || ""}</p>
+        <a href="${complaintUrl}" style="display: inline-block; margin-top: 12px; padding: 10px 16px; background: #2563eb; color: white; border-radius: 6px; text-decoration: none;">View Complaint</a>
+      </div>
+    `;
+
+    // Always notify IT
+    await sendEmail({
+      to: "it@gilanimobility.ae",
+      subject: `New comment on complaint #${complaint?.complaint_number || ""}`,
+      html,
+    });
+  } catch (notifyError) {
+    console.error("Failed to send comment notification:", notifyError);
+  }
+
   revalidatePath(`/complaints/${complaintId}`);
   return comment;
 }

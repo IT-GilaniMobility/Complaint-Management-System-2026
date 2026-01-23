@@ -77,7 +77,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         />
         {!collapsed && (
           <div>
-            <p className="text-sm font-semibold leading-tight">Complaint Manager</p>
+            <p className="text-sm font-semibold leading-tight">Complaint Management</p>
             <p className="text-xs text-muted-foreground">Admin Console</p>
           </div>
         )}
