@@ -207,7 +207,7 @@ export default function ComplaintDetailsPage() {
             <p className="text-sm text-muted-foreground">Reported by {ticket.reporter}</p>
           </div>
         </div>
-        <Badge className={statusColors[statusLabel] + " border"}>{statusLabel}</Badge>
+        <Badge className={statusColors[statusLabel] + " border whitespace-nowrap"}>{statusLabel}</Badge>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -240,7 +240,7 @@ export default function ComplaintDetailsPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">Status</p>
-                <Badge className={statusColors[statusLabel] + " border mt-1"}>{statusLabel}</Badge>
+                <Badge className={statusColors[statusLabel] + " border mt-1 whitespace-nowrap"}>{statusLabel}</Badge>
               </div>
             </CardContent>
           </Card>
@@ -339,7 +339,7 @@ export default function ComplaintDetailsPage() {
               <CardDescription>State and SLA</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Badge className={statusColors[statusLabel] + " border"}>{statusLabel}</Badge>
+              <Badge className={statusColors[statusLabel] + " border whitespace-nowrap"}>{statusLabel}</Badge>
               <div className="rounded-lg bg-muted/60 p-3 text-sm">
                 <p className="font-semibold">SLA due {formatDate(ticket.slaDueAt)}</p>
                 <p className="text-muted-foreground">{isOverdue(ticket) ? "Overdue" : "Within target"}</p>

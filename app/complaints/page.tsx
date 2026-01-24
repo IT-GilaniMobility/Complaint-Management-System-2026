@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { AssignDialog, StatusDialog } from "@/components/complaints/complaint-actions";
 import { ComplaintTable } from "@/components/complaints/complaint-table";
@@ -38,6 +39,8 @@ export default function ComplaintsPage() {
   const [assignTarget, setAssignTarget] = useState<string | null>(null);
   const [statusTarget, setStatusTarget] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const initializedFromParams = useRef(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,8 +82,9 @@ export default function ComplaintsPage() {
             number: c.complaint_number,
             subject: c.subject,
             description: c.description,
-            // Use the real category ID so table lookup works
+            // Use the real category ID and store display name
             categoryId: c.category?.id || "unknown",
+            categoryName: c.category?.name || "Unknown",
             priority: c.priority,
             status: c.status,
             reporter: c.reporter?.name || "Unknown",
@@ -106,6 +110,25 @@ export default function ComplaintsPage() {
 
     fetchData();
   }, []);
+
+  // Initialize from URL status param so dashboard summary boxes can deep-link
+  useEffect(() => {
+    if (initializedFromParams.current) return;
+    initializedFromParams.current = true;
+
+    const statusParam = searchParams.get("status") as SummaryKey | null;
+    if (!statusParam) return;
+
+    setActiveTab(statusParam);
+
+    if (statusParam === "Total") {
+      setFilters((prev) => ({ ...prev, status: "All" }));
+    } else if (statusParam === "Overdue") {
+      setFilters((prev) => ({ ...prev, status: "Overdue" }));
+    } else {
+      setFilters((prev) => ({ ...prev, status: statusParam }));
+    }
+  }, [searchParams]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((complaint) => {
@@ -251,11 +274,11 @@ export default function ComplaintsPage() {
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as SummaryKey)} className="space-y-4">
         <TabsList className="flex w-full flex-wrap gap-2 bg-muted/70 p-1">
           {tabs.map((tab) => (
-            <TabsTrigger key={tab} value={tab} className="flex-1 min-w-[120px]">
+            <TabsTrigger key={tab} value={tab} className="flex-1 min-w-[120px] whitespace-nowrap">
               {tab}
             </TabsTrigger>
           ))}
-          <TabsTrigger value="Overdue" className="flex-1 min-w-[120px] text-destructive">
+          <TabsTrigger value="Overdue" className="flex-1 min-w-[120px] text-destructive whitespace-nowrap">
             Overdue
           </TabsTrigger>
         </TabsList>

@@ -91,7 +91,7 @@ export function SummaryCards({
                   </div>
                 </div>
                 <div className="text-2xl font-semibold">{counts[key]}</div>
-                <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+                <p className="mt-1 text-xs text-muted-foreground whitespace-nowrap">{label}</p>
               </CardContent>
             </Card>
           </button>

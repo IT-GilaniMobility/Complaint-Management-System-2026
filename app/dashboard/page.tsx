@@ -1,7 +1,7 @@
 import { ArrowUpRight, Calendar, Bell } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { SummaryCards } from "@/components/complaints/summary-cards";
+import { DashboardSummaryCards } from "@/components/dashboard/dashboard-summary-cards";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     resolvedAt: c.resolved_at,
     closedAt: c.closed_at,
     dueDate: c.due_date,
-    slaDueAt: c.due_date, // Use due_date as slaDueAt
+      slaDueAt: c.due_date, // Use due_date as slaDueAt
   }));
 
   return (
@@ -65,8 +65,8 @@ export default async function DashboardPage() {
         <Button>+ New Complaint</Button>
       </div>
 
-      {/* KPI Cards */}
-      <SummaryCards complaints={complaintsForSummary} />
+      {/* KPI Cards (clickable, route into /complaints with status filter) */}
+      <DashboardSummaryCards complaints={complaintsForSummary as any} />
 
       {/* Recent Notifications - Live updating client component */}
       <NotificationsWidget />

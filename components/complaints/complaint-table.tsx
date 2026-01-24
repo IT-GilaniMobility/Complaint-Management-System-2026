@@ -75,8 +75,12 @@ export function ComplaintTable({ data, categories, users, loading, onAssign, onC
         accessorKey: "categoryId",
         header: "Category",
         cell: ({ row }) => {
+          const original: any = row.original as any;
           const categoryName =
-            categoryLookup[row.original.categoryId] ?? row.original.categoryId ?? "Unknown";
+            original.categoryName ||
+            categoryLookup[original.categoryId] ||
+            original.categoryId ||
+            "Unknown";
           return <span className="text-sm text-muted-foreground">{categoryName}</span>;
         },
       },
@@ -92,7 +96,7 @@ export function ComplaintTable({ data, categories, users, loading, onAssign, onC
         header: "Status",
         cell: ({ row }) => {
           const label = complaintStatusLabel(row.original);
-          return <Badge className={cn("w-fit border", statusColors[label])}>{label}</Badge>;
+          return <Badge className={cn("w-fit border whitespace-nowrap", statusColors[label])}>{label}</Badge>;
         },
       },
       {
