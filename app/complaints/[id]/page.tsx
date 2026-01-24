@@ -56,7 +56,8 @@ export default function ComplaintDetailsPage() {
           reporter: data.reporter?.name || "Unknown",
           assignedTo: data.assigned_to?.id || null,
           assignedName: data.assigned_to?.name || "Unassigned",
-          categoryId: data.category?.name || "Unknown",
+          // Store a clear category name for display
+          categoryName: data.category?.name || "Unknown",
           priority: data.priority,
           status: data.status,
           createdAt: data.created_at,
@@ -235,7 +236,7 @@ export default function ComplaintDetailsPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">Category</p>
-                <p className="font-medium">{ticket.categoryId}</p>
+                <p className="font-medium">{ticket.categoryName}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Status</p>

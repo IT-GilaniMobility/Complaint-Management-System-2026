@@ -34,6 +34,7 @@ const formSchema = z.object({
   branch: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
+  dueDate: z.string().min(1, "Due date is required"),
 });
 
 export default function NewComplaintPage() {
@@ -52,6 +53,7 @@ export default function NewComplaintPage() {
       branch: "",
       phone: "",
       email: "",
+      dueDate: "",
     },
   });
 
@@ -176,6 +178,20 @@ export default function NewComplaintPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Due date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

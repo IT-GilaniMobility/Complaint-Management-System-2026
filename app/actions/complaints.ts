@@ -19,6 +19,7 @@ type CreateComplaintInput = {
   branch?: string;
   phone?: string;
   email?: string;
+  dueDate?: string;
 };
 
 export async function createComplaintAction(input: CreateComplaintInput) {
@@ -124,6 +125,9 @@ export async function createComplaintAction(input: CreateComplaintInput) {
 
   // Insert complaint
   console.log('Inserting complaint with categoryId:', categoryId);
+  const baseDueDate = input.dueDate
+    ? new Date(input.dueDate)
+    : addDays(new Date(), 3);
   const complaintData = {
     subject: input.subject,
     description: input.description,
@@ -135,7 +139,7 @@ export async function createComplaintAction(input: CreateComplaintInput) {
     customer_name: input.branch || null,
     customer_email: input.email || null,
     customer_phone: input.phone || null,
-    due_date: addDays(new Date(), 3).toISOString(),
+    due_date: baseDueDate.toISOString(),
     status: "Unassigned",
   } as any;
   

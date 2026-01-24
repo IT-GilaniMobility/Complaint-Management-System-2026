@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { categories } from "@/lib/mock-data";
+import type { Category } from "@/lib/mock-data";
 import { complaintStatusLabel, isOverdue } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -31,6 +31,7 @@ const initialFilters: ComplaintFilters = {
 export default function ComplaintsPage() {
   const [rows, setRows] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [filters, setFilters] = useState<ComplaintFilters>(initialFilters);
   const [activeTab, setActiveTab] = useState<SummaryKey>("Total");
   const [loading, setLoading] = useState(true);
@@ -60,24 +61,40 @@ export default function ComplaintsPage() {
         .order("name");
 
       if (complaintsData) {
-        // Transform to match expected format
-        const transformed = complaintsData.map((c: any) => ({
-          id: c.id,
-          number: c.complaint_number,
-          subject: c.subject,
-          description: c.description,
-          categoryId: c.category?.name || 'Unknown',
-          priority: c.priority,
-          status: c.status,
-          reporter: c.reporter?.name || 'Unknown',
-          assignedTo: c.assigned?.name || null,
-          createdAt: c.created_at,
-          resolvedAt: c.resolved_at,
-          closedAt: c.closed_at,
-          dueDate: c.due_date,
-          slaDueAt: c.due_date,
-        }));
+        const categoryMap = new Map<string, Category>();
+
+        // Transform to match expected format and collect categories from DB
+        const transformed = complaintsData.map((c: any) => {
+          if (c.category) {
+            if (!categoryMap.has(c.category.id)) {
+              categoryMap.set(c.category.id, {
+                id: c.category.id,
+                name: c.category.name,
+              });
+            }
+          }
+
+          return {
+            id: c.id,
+            number: c.complaint_number,
+            subject: c.subject,
+            description: c.description,
+            // Use the real category ID so table lookup works
+            categoryId: c.category?.id || "unknown",
+            priority: c.priority,
+            status: c.status,
+            reporter: c.reporter?.name || "Unknown",
+            assignedTo: c.assigned?.name || null,
+            createdAt: c.created_at,
+            resolvedAt: c.resolved_at,
+            closedAt: c.closed_at,
+            dueDate: c.due_date,
+            slaDueAt: c.due_date,
+          };
+        });
+
         setRows(transformed);
+        setCategories(Array.from(categoryMap.values()));
       }
 
       if (usersData) {

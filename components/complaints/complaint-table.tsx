@@ -74,7 +74,11 @@ export function ComplaintTable({ data, categories, users, loading, onAssign, onC
       {
         accessorKey: "categoryId",
         header: "Category",
-        cell: ({ row }) => <span className="text-sm text-muted-foreground">{categoryLookup[row.original.categoryId]}</span>,
+        cell: ({ row }) => {
+          const categoryName =
+            categoryLookup[row.original.categoryId] ?? row.original.categoryId ?? "Unknown";
+          return <span className="text-sm text-muted-foreground">{categoryName}</span>;
+        },
       },
       {
         accessorKey: "priority",
