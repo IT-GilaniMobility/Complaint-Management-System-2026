@@ -169,29 +169,30 @@ export async function createComplaintAction(input: CreateComplaintInput) {
     );
   }
 
-  // Send EmailJS notification for new complaint
-  try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    await sendComplaintCreatedEmail({
-      complaint_number: (data as any).complaint_number,
-      subject: input.subject,
-      category: labelByKey[input.category] || input.category,
-      priority: input.priority,
-      description: input.description,
-      reporter_email: user.email || "Unknown",
-      created_at: new Date().toLocaleString(),
-      dashboard_link: `${appUrl}/complaints`,
-    });
-  } catch (emailError) {
+  // Send EmailJS notification for new complaint (non-blocking)
+  const complaintNumber = (data as any).complaint_number;
+  console.log("Complaint created successfully:", complaintNumber);
+  
+  // Fire and forget - don't await to avoid blocking
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  sendComplaintCreatedEmail({
+    complaint_number: complaintNumber,
+    subject: input.subject,
+    category: labelByKey[input.category] || input.category,
+    priority: input.priority,
+    description: input.description,
+    reporter_email: user.email || "Unknown",
+    created_at: new Date().toLocaleString(),
+    dashboard_link: `${appUrl}/complaints`,
+  }).catch((emailError) => {
     console.error("Failed to send EmailJS notification:", emailError);
-    // Don't throw - email failure shouldn't block complaint creation
-  }
+  });
 
   revalidatePath("/complaints");
-  return { success: true, complaintNumber: (data as any).complaint_number };
+  return { success: true, complaintNumber };
   } catch (error: any) {
-    console.error("createComplaintAction failed:", error);
-    throw error;
+    console.error("createComplaintAction failed:", error?.message || error);
+    throw new Error(error?.message || "Failed to create complaint");
   }
 }
 
@@ -232,21 +233,19 @@ export async function updateComplaintStatusAction(complaintId: string, status: C
     }
   }
 
-  // Send EmailJS notification when complaint is resolved or closed
+  // Send EmailJS notification when complaint is resolved or closed (non-blocking)
   if (status === "Resolved" || status === "Closed") {
-    try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      await sendComplaintResolvedEmail({
-        complaint_number: data.complaint_number || "",
-        subject: data.subject || "",
-        status: status,
-        resolved_at: new Date().toLocaleString(),
-        dashboard_link: `${appUrl}/complaints/${complaintId}`,
-      });
-    } catch (emailError) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    console.log("Sending resolved email for complaint:", data.complaint_number);
+    sendComplaintResolvedEmail({
+      complaint_number: data.complaint_number || "",
+      subject: data.subject || "",
+      status: status,
+      resolved_at: new Date().toLocaleString(),
+      dashboard_link: `${appUrl}/complaints/${complaintId}`,
+    }).catch((emailError) => {
       console.error("Failed to send EmailJS resolved notification:", emailError);
-      // Don't throw - email failure shouldn't block status update
-    }
+    });
   }
 
   revalidatePath("/complaints");
