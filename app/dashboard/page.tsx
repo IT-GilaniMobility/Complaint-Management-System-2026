@@ -1,5 +1,6 @@
 import { ArrowUpRight, Calendar, Bell } from "lucide-react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { DashboardSummaryCards } from "@/components/dashboard/dashboard-summary-cards";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
@@ -62,7 +63,9 @@ export default async function DashboardPage() {
             Overview of complaint status and team performance
           </p>
         </div>
-        <Button>+ New Complaint</Button>
+        <Button asChild>
+          <Link href="/complaints/new">+ New Complaint</Link>
+        </Button>
       </div>
 
       {/* KPI Cards (clickable, route into /complaints with status filter) */}
