@@ -117,3 +117,71 @@ export async function sendComplaintResolvedEmail(params: ComplaintResolvedParams
     to_email: NOTIFICATION_EMAIL,
   });
 }
+
+// Generic email template for sending custom emails
+// Note: You can create a custom template in EmailJS for more control
+// Currently uses the complaint created template as a fallback
+
+interface CustomEmailParams {
+  to_email: string;
+  subject: string;
+  message: string;
+  complaint_number?: string;
+}
+
+export async function sendCustomEmail(params: CustomEmailParams): Promise<boolean> {
+  const { publicKey, privateKey } = getEmailJSKeys();
+  
+  if (!publicKey || !privateKey) {
+    console.error("[EmailJS] Keys not configured. PUBLIC_KEY:", !!publicKey, "PRIVATE_KEY:", !!privateKey);
+    return false;
+  }
+
+  console.log(`[EmailJS] Sending custom email to ${params.to_email}`);
+
+  try {
+    // Use the default template but override template params
+    const payload = {
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: EMAILJS_TEMPLATE_CREATED, // Using the created template as fallback
+      user_id: publicKey,
+      accessToken: privateKey,
+      template_params: {
+        to_email: params.to_email,
+        subject: params.subject,
+        description: params.message,
+        complaint_number: params.complaint_number || "N/A",
+        category: "Email Communication",
+        priority: "Normal",
+        reporter_email: "system@gilanimobility.ae",
+        created_at: new Date().toISOString(),
+        dashboard_link: "",
+      },
+    };
+
+    const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "origin": "http://localhost",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      console.log(`[EmailJS] Custom email sent successfully to ${params.to_email}`);
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.error(`[EmailJS] Failed to send custom email: ${response.status} - ${errorText}`);
+      return false;
+    }
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error(`[EmailJS] Error sending custom email:`, error.message);
+    } else {
+      console.error(`[EmailJS] Error sending custom email:`, error);
+    }
+    return false;
+  }
+}

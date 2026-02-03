@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
 import { sendEmail, generateAssignmentEmailTemplate } from "@/lib/email/notification";
-import { sendComplaintCreatedEmail, sendComplaintResolvedEmail } from "@/lib/email/emailjs";
+import { sendComplaintCreatedEmail, sendComplaintResolvedEmail, sendCustomEmail } from "@/lib/email/emailjs";
 
 type ComplaintStatus = "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed";
 import { addDays } from "date-fns";
@@ -524,6 +524,34 @@ export async function updateComplaintAssigneeAction(complaintId: string, assigne
   return data;
   } catch (error: any) {
     console.error("updateComplaintAssigneeAction error:", error);
+    throw error;
+  }
+}
+
+export async function sendEmailAction(
+  toEmail: string,
+  subject: string,
+  message: string,
+  complaintNumber?: string
+) {
+  try {
+    console.log('[Email] Starting sendEmailAction');
+    console.log('[Email] To:', toEmail, 'Subject:', subject);
+    
+    const result = await sendCustomEmail({
+      to_email: toEmail,
+      subject: subject,
+      message: message,
+      complaint_number: complaintNumber,
+    });
+
+    if (!result) {
+      throw new Error("Failed to send email");
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("sendEmailAction error:", error);
     throw error;
   }
 }

@@ -2,9 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowLeft, CheckCircle2, UserRoundCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, UserRoundCheck, StickyNote, Mail } from "lucide-react";
 
-import { AssignDialog, StatusDialog } from "@/components/complaints/complaint-actions";
+import { AssignDialog, StatusDialog, QuickNoteDialog, SendEmailDialog } from "@/components/complaints/complaint-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { fetchComplaintById, fetchUsers } from "@/lib/supabase/queries";
 import type { Database } from "@/lib/supabase/database.types";
 import { complaintStatusLabel, formatDate, isOverdue, priorityColors, statusColors } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { updateComplaintAssigneeAction, updateComplaintStatusAction, createCommentAction } from "@/app/actions/complaints";
+import { updateComplaintAssigneeAction, updateComplaintStatusAction, createCommentAction, sendEmailAction } from "@/app/actions/complaints";
 
 type ComplaintStatus = "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed";
 type ComplaintPriority = Database["public"]["Tables"]["complaints"]["Row"]["priority"];
@@ -34,11 +34,14 @@ export default function ComplaintDetailsPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [assignOpen, setAssignOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const [publicMessage, setPublicMessage] = useState("");
   const [internalMessage, setInternalMessage] = useState("");
   const [isUpdatingStatus, startStatusTransition] = useTransition();
   const [isUpdatingAssignee, startAssignTransition] = useTransition();
   const [isAddingComment, startCommentTransition] = useTransition();
+  const [isSendingEmail, startEmailTransition] = useTransition();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -226,6 +229,47 @@ export default function ComplaintDetailsPage() {
     });
   };
 
+  const handleQuickNote = (note: string) => {
+    if (!ticket || !note.trim()) return;
+    startCommentTransition(async () => {
+      try {
+        await createCommentAction(ticket.id, note, true);
+        setLocalComments((prev) => [
+          {
+            id: crypto.randomUUID(),
+            complaintId: ticket.id,
+            authorId: "You",
+            type: "internal",
+            message: note,
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+        addActivity("New internal note added", "note");
+        toast({ title: "Note added", description: "Internal note saved successfully." });
+        setQuickNoteOpen(false);
+      } catch (err: any) {
+        console.error(err);
+        toast({ title: "Failed to add note", description: err?.message ?? "Unexpected error", variant: "destructive" });
+      }
+    });
+  };
+
+  const handleSendEmail = (toEmail: string, subject: string, message: string) => {
+    if (!ticket) return;
+    startEmailTransition(async () => {
+      try {
+        await sendEmailAction(toEmail, subject, message, ticket.number);
+        addActivity(`Email sent to ${toEmail}`, "note");
+        toast({ title: "Email sent", description: `Email sent to ${toEmail}` });
+        setSendEmailOpen(false);
+      } catch (err: any) {
+        console.error(err);
+        toast({ title: "Failed to send email", description: err?.message ?? "Unexpected error", variant: "destructive" });
+      }
+    });
+  };
+
   const statusLabel = complaintStatusLabel(ticket);
 
   return (
@@ -408,13 +452,18 @@ export default function ComplaintDetailsPage() {
               <CardDescription>Update without leaving the page.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="secondary" className="w-full" onClick={() => setAssignOpen(true)} disabled={isUpdatingAssignee}>
-                Reassign owner
+              <Button variant="secondary" className="w-full justify-start" onClick={() => setAssignOpen(true)} disabled={isUpdatingAssignee}>
+                <UserRoundCheck className="mr-2 h-4 w-4" /> Reassign owner
               </Button>
-              <Button variant="outline" className="w-full" onClick={() => setStatusOpen(true)} disabled={isUpdatingStatus}>
-                Change status
+              <Button variant="outline" className="w-full justify-start" onClick={() => setStatusOpen(true)} disabled={isUpdatingStatus}>
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Change status
               </Button>
-              <Button variant="ghost" className="w-full" onClick={() => handleAddComment("internal")} disabled={isAddingComment}>Add quick note</Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setQuickNoteOpen(true)} disabled={isAddingComment}>
+                <StickyNote className="mr-2 h-4 w-4" /> Add quick note
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setSendEmailOpen(true)} disabled={isSendingEmail}>
+                <Mail className="mr-2 h-4 w-4" /> Send email
+              </Button>
             </CardContent>
           </Card>
 
@@ -454,6 +503,21 @@ export default function ComplaintDetailsPage() {
         complaint={ticket}
         onOpenChange={setStatusOpen}
         onChangeStatus={(status) => handleStatus(status)}
+      />
+
+      <QuickNoteDialog
+        open={quickNoteOpen}
+        onOpenChange={setQuickNoteOpen}
+        onSaveNote={handleQuickNote}
+        isLoading={isAddingComment}
+      />
+
+      <SendEmailDialog
+        open={sendEmailOpen}
+        complaint={ticket ? { number: ticket.number, subject: ticket.subject } : null}
+        onOpenChange={setSendEmailOpen}
+        onSendEmail={handleSendEmail}
+        isLoading={isSendingEmail}
       />
     </div>
   );
