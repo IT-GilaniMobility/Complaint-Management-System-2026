@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -29,7 +29,20 @@ const initialFilters: ComplaintFilters = {
   assigned: "all",
 };
 
+// Wrapper component with Suspense for useSearchParams
 export default function ComplaintsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-full items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <ComplaintsPageContent />
+    </Suspense>
+  );
+}
+
+function ComplaintsPageContent() {
   const [rows, setRows] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
