@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowLeft, CheckCircle2, UserRoundCheck } from "lucide-react";
 
 import { AssignDialog, StatusDialog } from "@/components/complaints/complaint-actions";
@@ -29,6 +29,8 @@ export default function ComplaintDetailsPage() {
   const [ticket, setTicket] = useState<any | null>(null);
   const [localComments, setLocalComments] = useState<any[]>([]);
   const [localActivities, setLocalActivities] = useState<any[]>([]);
+  const [commentsTab, setCommentsTab] = useState<"public" | "internal">("public");
+  const commentsRef = useRef<HTMLDivElement | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [assignOpen, setAssignOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -76,13 +78,31 @@ export default function ComplaintDetailsPage() {
           }))
         );
         setLocalActivities(
-          (data.activities || []).map((a: any) => ({
-            id: a.id,
-            complaintId: data.id,
-            message: a.message,
-            createdAt: a.created_at,
-            type: a.type || "status",
-          }))
+          (data.activities || []).map((a: any) => {
+            const action = (a.action as string) || "activity";
+            const details = (a.details || {}) as any;
+
+            let message: string;
+            if (action === "status_change") {
+              message = `Status changed to ${details.to ?? ""}`.trim();
+            } else if (action === "assignment_change") {
+              message = "Assignment updated";
+            } else if (action === "comment") {
+              const kind = details.type === "internal" ? "internal note" : "public comment";
+              message = `New ${kind} added`;
+            } else {
+              message = action;
+            }
+
+            return {
+              id: a.id,
+              complaintId: data.id,
+              message,
+              createdAt: a.created_at,
+              action,
+              details,
+            };
+          })
         );
       } catch (err) {
         console.error("Failed to load complaint", err);
@@ -118,8 +138,22 @@ export default function ComplaintDetailsPage() {
   const assignee = ticket.assignedName ?? "Unassigned";
 
   const addActivity = (message: string, type: "status" | "assignment" | "comment" | "note") => {
+    const actionMap: Record<string, string> = {
+      status: "status_change",
+      assignment: "assignment_change",
+      comment: "comment",
+      note: "note",
+    };
+
     setLocalActivities((prev) => [
-      { id: crypto.randomUUID(), complaintId: ticket.id, message, createdAt: new Date().toISOString(), type },
+      {
+        id: crypto.randomUUID(),
+        complaintId: ticket.id,
+        message,
+        createdAt: new Date().toISOString(),
+        action: actionMap[type] || type,
+        details: {},
+      },
       ...prev,
     ]);
   };
@@ -252,25 +286,38 @@ export default function ComplaintDetailsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {localActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
+                <button
+                  key={activity.id}
+                  type="button"
+                  className="flex w-full items-start gap-3 text-left rounded-lg hover:bg-muted/70 p-2 transition-colors"
+                  onClick={() => {
+                    if (activity.action === "comment") {
+                      const type = activity.details?.type === "internal" ? "internal" : "public";
+                      setCommentsTab(type);
+                      if (commentsRef.current) {
+                        commentsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }
+                    }
+                  }}
+                >
                   <div className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
                   <div>
                     <p className="text-sm font-medium">{activity.message}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(activity.createdAt)}</p>
                   </div>
-                </div>
+                </button>
               ))}
               {localActivities.length === 0 && <p className="text-sm text-muted-foreground">No activity logged yet.</p>}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card ref={commentsRef}>
             <CardHeader>
               <CardTitle>Comments</CardTitle>
               <CardDescription>Public replies and internal notes.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="public" className="space-y-4">
+              <Tabs value={commentsTab} onValueChange={(val) => setCommentsTab(val as "public" | "internal")} className="space-y-4">
                 <TabsList>
                   <TabsTrigger value="public">Public</TabsTrigger>
                   <TabsTrigger value="internal">Internal notes</TabsTrigger>

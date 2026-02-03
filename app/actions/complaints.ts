@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
 import { sendEmail, generateAssignmentEmailTemplate } from "@/lib/email/notification";
+import { sendComplaintCreatedEmail, sendComplaintResolvedEmail } from "@/lib/email/emailjs";
 
 type ComplaintStatus = "Pending" | "Unassigned" | "In Progress" | "Resolved" | "Closed";
 import { addDays } from "date-fns";
@@ -168,6 +169,24 @@ export async function createComplaintAction(input: CreateComplaintInput) {
     );
   }
 
+  // Send EmailJS notification for new complaint
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    await sendComplaintCreatedEmail({
+      complaint_number: (data as any).complaint_number,
+      subject: input.subject,
+      category: labelByKey[input.category] || input.category,
+      priority: input.priority,
+      description: input.description,
+      reporter_email: user.email || "Unknown",
+      created_at: new Date().toLocaleString(),
+      dashboard_link: `${appUrl}/complaints`,
+    });
+  } catch (emailError) {
+    console.error("Failed to send EmailJS notification:", emailError);
+    // Don't throw - email failure shouldn't block complaint creation
+  }
+
   revalidatePath("/complaints");
   return { success: true, complaintNumber: (data as any).complaint_number };
   } catch (error: any) {
@@ -210,6 +229,23 @@ export async function updateComplaintStatusAction(complaintId: string, status: C
       } as Database["public"]["Tables"]["activities"]["Insert"]);
     if (activityError) {
       console.error("Failed to log activity:", activityError);
+    }
+  }
+
+  // Send EmailJS notification when complaint is resolved or closed
+  if (status === "Resolved" || status === "Closed") {
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      await sendComplaintResolvedEmail({
+        complaint_number: data.complaint_number || "",
+        subject: data.subject || "",
+        status: status,
+        resolved_at: new Date().toLocaleString(),
+        dashboard_link: `${appUrl}/complaints/${complaintId}`,
+      });
+    } catch (emailError) {
+      console.error("Failed to send EmailJS resolved notification:", emailError);
+      // Don't throw - email failure shouldn't block status update
     }
   }
 

@@ -28,6 +28,9 @@ export async function GET(request: Request) {
       // Get cookies for Supabase
       const cookieStore = await cookies();
       
+      // Create a response object to set cookies on
+      const response = NextResponse.redirect(new URL("/dashboard", baseUrl));
+      
       const supabase = createServerClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -37,10 +40,13 @@ export async function GET(request: Request) {
               return cookieStore.get(name)?.value;
             },
             set(name: string, value: string, options: any) {
+              // Set cookies on both the cookie store and response
               cookieStore.set(name, value, options);
+              response.cookies.set(name, value, options);
             },
             remove(name: string, options: any) {
               cookieStore.set(name, "", { ...options, maxAge: 0 });
+              response.cookies.set(name, "", { ...options, maxAge: 0 });
             },
           },
         }
@@ -65,17 +71,8 @@ export async function GET(request: Request) {
 
       // Redirect to dashboard after successful authentication
       console.log("Session exchange success, redirecting to /dashboard");
-      const response = NextResponse.redirect(new URL("/dashboard", baseUrl));
       
-      // Ensure cookies are set on the response
-      response.cookies.set('sb-auth-token', sessionData.session.access_token, {
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 // 7 days
-      });
-      
+      // Return the response with cookies already set by Supabase client
       return response;
     } catch (err) {
       console.error("Unexpected error in callback:", err);

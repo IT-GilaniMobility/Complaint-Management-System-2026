@@ -15,6 +15,7 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
@@ -28,7 +29,22 @@ function LoginContent() {
     if (errorParam) {
       setError(messageParam || 'Authentication failed. Please try again.');
     }
-  }, [searchParams]);
+
+    // Check if user is already logged in
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          router.replace('/dashboard');
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking auth:", err);
+      }
+      setCheckingAuth(false);
+    };
+    checkUser();
+  }, [searchParams, supabase.auth, router]);
 
   const toggleTheme = () => {
     const newIsDark = !isDark;
@@ -39,6 +55,15 @@ function LoginContent() {
       document.documentElement.classList.remove('dark');
     }
   };
+
+  // Show nothing while checking auth to prevent flash
+  if (checkingAuth) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
