@@ -25,26 +25,37 @@ type CreateComplaintInput = {
 
 export async function createComplaintAction(input: CreateComplaintInput) {
   try {
-    console.log('Creating complaint with input:', { ...input, description: input.description?.substring(0, 50) + '...' });
+    console.log('[Complaint] Starting createComplaintAction');
+    console.log('[Complaint] Input:', { ...input, description: input.description?.substring(0, 50) + '...' });
+    
+    // Check environment variables first
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('[Complaint] Missing NEXT_PUBLIC_SUPABASE_URL');
+      throw new Error("Server configuration error: Missing database URL");
+    }
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[Complaint] Missing SUPABASE_SERVICE_ROLE_KEY');
+      throw new Error("Server configuration error: Missing database key");
+    }
     
     const supabase = createServiceClient();
-    console.log('Service client created successfully');
+    console.log('[Complaint] Service client created successfully');
     
     // Get authenticated user
     const authSupabase = await createClient();
     const { data: { user }, error: authError } = await authSupabase.auth.getUser();
     
     if (authError) {
-      console.error('Auth error in createComplaint:', authError);
+      console.error('[Complaint] Auth error:', authError);
       throw new Error("You must be logged in to create a complaint");
     }
     
     if (!user) {
-      console.error('No user found in createComplaint');
+      console.error('[Complaint] No user found');
       throw new Error("You must be logged in to create a complaint");
     }
     
-    console.log('User authenticated:', user.id);
+    console.log('[Complaint] User authenticated:', user.id);
 
   // Map categories to seeded IDs or create new ones
   const seededIds = {
