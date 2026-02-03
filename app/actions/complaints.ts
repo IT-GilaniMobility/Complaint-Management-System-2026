@@ -201,6 +201,28 @@ export async function createComplaintAction(input: CreateComplaintInput) {
       console.log("[Complaint] Email sent successfully for:", complaintNumber);
     } else {
       console.error("[Complaint] Email failed for:", complaintNumber);
+      // Fallback: try sending via internal email service (Resend/Nodemailer)
+      const html = `
+        <h2>New Complaint Created</h2>
+        <p><strong>Complaint #:</strong> ${complaintNumber}</p>
+        <p><strong>Subject:</strong> ${input.subject}</p>
+        <p><strong>Category:</strong> ${labelByKey[input.category] || input.category}</p>
+        <p><strong>Priority:</strong> ${input.priority}</p>
+        <p><strong>Reporter:</strong> ${user.email || "Unknown"}</p>
+        <p><strong>Created At:</strong> ${new Date().toLocaleString()}</p>
+        <p><a href="${appUrl}/complaints">Open Complaints Dashboard</a></p>
+      `;
+      sendEmail({
+        to: "it@gilanimobility.ae",
+        subject: `New Complaint Created #${complaintNumber}`,
+        html,
+      }).then((fallback) => {
+        if (fallback) {
+          console.log("[Complaint] Fallback email sent via internal service for:", complaintNumber);
+        } else {
+          console.error("[Complaint] Fallback email failed for:", complaintNumber);
+        }
+      }).catch((err) => console.error("[Complaint] Fallback email error:", err));
     }
   }).catch((emailError) => {
     console.error("[Complaint] Email error:", emailError);
@@ -266,6 +288,26 @@ export async function updateComplaintStatusAction(complaintId: string, status: C
         console.log("[Status] Resolved email sent successfully for:", data.complaint_number);
       } else {
         console.error("[Status] Resolved email failed for:", data.complaint_number);
+        // Fallback: internal email service
+        const html = `
+          <h2>Complaint Resolved</h2>
+          <p><strong>Complaint #:</strong> ${data.complaint_number}</p>
+          <p><strong>Subject:</strong> ${data.subject}</p>
+          <p><strong>Status:</strong> ${status}</p>
+          <p><strong>Resolved At:</strong> ${new Date().toLocaleString()}</p>
+          <p><a href="${appUrl}/complaints/${complaintId}">Open Complaint</a></p>
+        `;
+        sendEmail({
+          to: "it@gilanimobility.ae",
+          subject: `Complaint Resolved #${data.complaint_number}`,
+          html,
+        }).then((fallback) => {
+          if (fallback) {
+            console.log("[Status] Fallback resolved email sent via internal service for:", data.complaint_number);
+          } else {
+            console.error("[Status] Fallback resolved email failed for:", data.complaint_number);
+          }
+        }).catch((err) => console.error("[Status] Fallback email error:", err));
       }
     }).catch((emailError) => {
       console.error("[Status] Resolved email error:", emailError);

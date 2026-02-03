@@ -62,11 +62,12 @@ async function sendEmailJS(templateId: string, templateParams: Record<string, st
       accessToken: payload.accessToken ? "***set***" : "missing",
     });
 
+    const origin = process.env.NEXT_PUBLIC_APP_URL || "http://localhost";
     const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "origin": "http://localhost",
+        "origin": origin,
       },
       body: JSON.stringify(payload),
     });
