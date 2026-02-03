@@ -12,7 +12,14 @@ import { complaintStatusLabel, formatDate, priorityColors, statusColors } from "
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  let supabase: Awaited<ReturnType<typeof createClient>>;
+  try {
+    supabase = await createClient();
+  } catch (e: any) {
+    console.error("[Dashboard] Supabase init error:", e?.message || e);
+    // If environment is missing in Vercel preview, avoid render crash
+    redirect('/login');
+  }
   
   // Check if user is authenticated
   const { data: { user }, error: userError } = await supabase.auth.getUser();
