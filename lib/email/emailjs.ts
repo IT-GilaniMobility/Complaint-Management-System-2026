@@ -6,7 +6,7 @@ const EMAILJS_TEMPLATE_CREATED = "template_bjen6qr";
 const EMAILJS_TEMPLATE_RESOLVED = "template_ble8pmn";
 const NOTIFICATION_EMAIL = "it@gilanimobility.ae";
 
-// Read env vars at runtime, not build time
+// Read env vars at runtime (inside functions), not at module load time
 function getEmailJSKeys() {
   return {
     publicKey: process.env.EMAILJS_PUBLIC_KEY || "",
@@ -34,23 +34,16 @@ interface ComplaintResolvedParams {
 }
 
 async function sendEmailJS(templateId: string, templateParams: Record<string, string>): Promise<boolean> {
-  // Get keys at runtime
   const { publicKey, privateKey } = getEmailJSKeys();
   
-  console.log("[EmailJS] Starting sendEmailJS...");
-  console.log("[EmailJS] PUBLIC_KEY exists:", !!publicKey, "length:", publicKey.length);
-  console.log("[EmailJS] PRIVATE_KEY exists:", !!privateKey, "length:", privateKey.length);
-  
   if (!publicKey || !privateKey) {
-    console.error("[EmailJS] Keys not configured. Set EMAILJS_PUBLIC_KEY and EMAILJS_PRIVATE_KEY in environment variables");
+    console.error("[EmailJS] Keys not configured. PUBLIC_KEY:", !!publicKey, "PRIVATE_KEY:", !!privateKey);
     return false;
   }
 
   console.log("[EmailJS] Attempting to send with private key authentication...");
 
   try {
-    // Use the server-side API with private key for authentication
-    // EmailJS requires 'accessToken' field with the private key for server-side calls
     const payload = {
       service_id: EMAILJS_SERVICE_ID,
       template_id: templateId,
