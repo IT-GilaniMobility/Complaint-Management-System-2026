@@ -4,9 +4,15 @@
 const EMAILJS_SERVICE_ID = "service_f1gdkek";
 const EMAILJS_TEMPLATE_CREATED = "template_bjen6qr";
 const EMAILJS_TEMPLATE_RESOLVED = "template_ble8pmn";
-const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || "";
-const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY || "";
 const NOTIFICATION_EMAIL = "it@gilanimobility.ae";
+
+// Read env vars at runtime, not build time
+function getEmailJSKeys() {
+  return {
+    publicKey: process.env.EMAILJS_PUBLIC_KEY || "",
+    privateKey: process.env.EMAILJS_PRIVATE_KEY || "",
+  };
+}
 
 interface ComplaintCreatedParams {
   complaint_number: string;
@@ -28,8 +34,15 @@ interface ComplaintResolvedParams {
 }
 
 async function sendEmailJS(templateId: string, templateParams: Record<string, string>): Promise<boolean> {
-  if (!EMAILJS_PUBLIC_KEY || !EMAILJS_PRIVATE_KEY) {
-    console.error("[EmailJS] Keys not configured. Set EMAILJS_PUBLIC_KEY and EMAILJS_PRIVATE_KEY in .env.local");
+  // Get keys at runtime
+  const { publicKey, privateKey } = getEmailJSKeys();
+  
+  console.log("[EmailJS] Starting sendEmailJS...");
+  console.log("[EmailJS] PUBLIC_KEY exists:", !!publicKey, "length:", publicKey.length);
+  console.log("[EmailJS] PRIVATE_KEY exists:", !!privateKey, "length:", privateKey.length);
+  
+  if (!publicKey || !privateKey) {
+    console.error("[EmailJS] Keys not configured. Set EMAILJS_PUBLIC_KEY and EMAILJS_PRIVATE_KEY in environment variables");
     return false;
   }
 
@@ -41,8 +54,8 @@ async function sendEmailJS(templateId: string, templateParams: Record<string, st
     const payload = {
       service_id: EMAILJS_SERVICE_ID,
       template_id: templateId,
-      user_id: EMAILJS_PUBLIC_KEY,
-      accessToken: EMAILJS_PRIVATE_KEY,
+      user_id: publicKey,
+      accessToken: privateKey,
       template_params: {
         ...templateParams,
         to_email: NOTIFICATION_EMAIL,
