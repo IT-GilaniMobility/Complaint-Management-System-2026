@@ -171,7 +171,8 @@ export async function createComplaintAction(input: CreateComplaintInput) {
 
   // Send EmailJS notification for new complaint (non-blocking)
   const complaintNumber = (data as any).complaint_number;
-  console.log("Complaint created successfully:", complaintNumber);
+  console.log("[Complaint] Created successfully:", complaintNumber);
+  console.log("[Complaint] Sending email notification to it@gilanimobility.ae...");
   
   // Fire and forget - don't await to avoid blocking
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -184,8 +185,14 @@ export async function createComplaintAction(input: CreateComplaintInput) {
     reporter_email: user.email || "Unknown",
     created_at: new Date().toLocaleString(),
     dashboard_link: `${appUrl}/complaints`,
+  }).then((success) => {
+    if (success) {
+      console.log("[Complaint] Email sent successfully for:", complaintNumber);
+    } else {
+      console.error("[Complaint] Email failed for:", complaintNumber);
+    }
   }).catch((emailError) => {
-    console.error("Failed to send EmailJS notification:", emailError);
+    console.error("[Complaint] Email error:", emailError);
   });
 
   revalidatePath("/complaints");
@@ -236,15 +243,21 @@ export async function updateComplaintStatusAction(complaintId: string, status: C
   // Send EmailJS notification when complaint is resolved or closed (non-blocking)
   if (status === "Resolved" || status === "Closed") {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    console.log("Sending resolved email for complaint:", data.complaint_number);
+    console.log("[Status] Sending resolved email for complaint:", data.complaint_number);
     sendComplaintResolvedEmail({
       complaint_number: data.complaint_number || "",
       subject: data.subject || "",
       status: status,
       resolved_at: new Date().toLocaleString(),
       dashboard_link: `${appUrl}/complaints/${complaintId}`,
+    }).then((success) => {
+      if (success) {
+        console.log("[Status] Resolved email sent successfully for:", data.complaint_number);
+      } else {
+        console.error("[Status] Resolved email failed for:", data.complaint_number);
+      }
     }).catch((emailError) => {
-      console.error("Failed to send EmailJS resolved notification:", emailError);
+      console.error("[Status] Resolved email error:", emailError);
     });
   }
 

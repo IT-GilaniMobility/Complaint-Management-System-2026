@@ -32,7 +32,7 @@ export async function GET() {
       const { createServiceClient } = await import("@/lib/supabase/service");
       const supabase = createServiceClient();
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("categories")
         .select("count")
         .limit(1);
